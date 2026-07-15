@@ -42,6 +42,9 @@ gem "active_model_serializers", "~> 0.10"
 # JWT for API authentication
 gem "jwt", "~> 2.7"
 
+# Pagination
+gem "kaminari"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

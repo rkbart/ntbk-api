@@ -541,6 +541,53 @@ bin/ci
 
 ---
 
+## API Controllers
+
+### Workspaces Controller
+**File**: `app/controllers/api/v1/workspaces_controller.rb`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | /api/v1/workspaces | List all workspaces | Yes |
+| GET | /api/v1/workspaces/:id | Get workspace | Yes |
+| POST | /api/v1/workspaces | Create workspace | Yes |
+| PATCH | /api/v1/workspaces/:id | Update workspace | Yes |
+
+### Folders Controller
+**File**: `app/controllers/api/v1/folders_controller.rb`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | /api/v1/workspaces/:workspace_id/folders | List folders | Yes |
+| GET | /api/v1/workspaces/:workspace_id/folders/:id | Get folder | Yes |
+| POST | /api/v1/workspaces/:workspace_id/folders | Create folder | Yes |
+| PATCH | /api/v1/workspaces/:workspace_id/folders/:id | Update folder | Yes |
+| DELETE | /api/v1/workspaces/:workspace_id/folders/:id | Delete folder | Yes |
+
+### Documents Controller
+**File**: `app/controllers/api/v1/documents_controller.rb`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | /api/v1/workspaces/:workspace_id/documents | List documents | Yes |
+| GET | /api/v1/workspaces/:workspace_id/documents/:id | Get document | Yes |
+| POST | /api/v1/workspaces/:workspace_id/documents | Create document | Yes |
+| PATCH | /api/v1/workspaces/:workspace_id/documents/:id | Update document | Yes |
+| DELETE | /api/v1/workspaces/:workspace_id/documents/:id | Delete document | Yes |
+| POST | /api/v1/workspaces/:workspace_id/documents/:id/archive | Archive document | Yes |
+| POST | /api/v1/workspaces/:workspace_id/documents/:id/restore | Restore document | Yes |
+
+### Tags Controller
+**File**: `app/controllers/api/v1/tags_controller.rb`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | /api/v1/tags | List all tags | Yes |
+| POST | /api/v1/tags | Create tag | Yes |
+| DELETE | /api/v1/tags/:id | Delete tag | Yes |
+
+---
+
 ## Test Coverage
 
 ### Model Specs
@@ -553,8 +600,12 @@ bin/ci
 
 ### Request Specs
 - `spec/requests/api/v1/auth_spec.rb` - 13 examples
+- `spec/requests/api/v1/workspaces_spec.rb` - 7 examples
+- `spec/requests/api/v1/folders_spec.rb` - 7 examples
+- `spec/requests/api/v1/documents_spec.rb` - 11 examples
+- `spec/requests/api/v1/tags_spec.rb` - 4 examples
 
-**Total**: 67 examples, 0 failures
+**Total**: 96 examples, 0 failures
 
 ---
 
@@ -566,7 +617,11 @@ ntbk/
 │   ├── controllers/
 │   │   └── api/v1/
 │   │       ├── base_controller.rb
-│   │       └── auth_controller.rb
+│   │       ├── auth_controller.rb
+│   │       ├── workspaces_controller.rb
+│   │       ├── folders_controller.rb
+│   │       ├── documents_controller.rb
+│   │       └── tags_controller.rb
 │   ├── models/
 │   │   ├── user.rb
 │   │   ├── workspace.rb
@@ -611,7 +666,11 @@ ntbk/
 │   │   ├── tag_spec.rb
 │   │   └── document_tag_spec.rb
 │   ├── requests/api/v1/
-│   │   └── auth_spec.rb
+│   │   ├── auth_spec.rb
+│   │   ├── workspaces_spec.rb
+│   │   ├── folders_spec.rb
+│   │   ├── documents_spec.rb
+│   │   └── tags_spec.rb
 │   └── support/
 │       └── api_helpers.rb
 ├── .github/workflows/
@@ -628,7 +687,7 @@ ntbk/
 - [x] Create Folder model
 - [x] Create Document model
 - [x] Create Tag model
+- [x] Add API controllers for CRUD operations
 - [ ] Implement full-text search
-- [ ] Add API controllers for CRUD operations
 - [ ] Add API versioning
 - [ ] Deploy to production
