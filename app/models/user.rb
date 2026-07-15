@@ -5,7 +5,7 @@ class User < ApplicationRecord
          :recoverable, :rememberable, :validatable
 
   # Associations
-  has_one :workspace, dependent: :destroy
+  has_many :workspaces, dependent: :destroy
   has_many :tags, dependent: :destroy
 
   # Validations
@@ -27,6 +27,6 @@ class User < ApplicationRecord
   end
 
   def create_default_workspace
-    create_workspace(name: "My Workspace")
+    workspaces.create(name: "My Workspace")
   end
 end
