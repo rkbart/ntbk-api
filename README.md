@@ -1,6 +1,6 @@
-# ntbk
+# NTBK
 
-A Rails API application.
+NTBK is a self-hosted note-taking platform focused on structured notes, Markdown editing, fast search, and AI-assisted knowledge retrieval.
 
 ## Ruby version
 
