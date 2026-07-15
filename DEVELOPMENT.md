@@ -53,10 +53,15 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
 
+  # Associations
+  has_one :workspace, dependent: :destroy
+  has_many :tags, dependent: :destroy
+
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :password, length: { minimum: 6 }, if: :password_required?
 
   before_save :downcase_email
+  after_create :create_default_workspace
 
   private
 
@@ -66,6 +71,10 @@ class User < ApplicationRecord
 
   def password_required?
     new_record? || password.present?
+  end
+
+  def create_default_workspace
+    create_workspace(name: "My Workspace")
   end
 end
 ```
@@ -115,28 +124,22 @@ spec/
 │   ├── api_helpers.rb
 │   └── database_cleaner.rb
 ├── factories/
-│   └── users.rb
+│   ├── users.rb
+│   ├── workspaces.rb
+│   ├── folders.rb
+│   ├── documents.rb
+│   ├── tags.rb
+│   └── document_tags.rb
 ├── models/
-│   └── user_spec.rb
+│   ├── user_spec.rb
+│   ├── workspace_spec.rb
+│   ├── folder_spec.rb
+│   ├── document_spec.rb
+│   ├── tag_spec.rb
+│   └── document_tag_spec.rb
 └── requests/
     └── api/v1/
         └── auth_spec.rb
-```
-
-### Factory
-**File**: `spec/factories/users.rb`
-```ruby
-FactoryBot.define do
-  factory :user do
-    sequence(:email) { |n| "user#{n}@example.com" }
-    password { "password123" }
-    password_confirmation { "password123" }
-
-    trait :confirmed do
-      confirmed_at { Time.current }
-    end
-  end
-end
 ```
 
 ### Running Tests
@@ -166,6 +169,7 @@ bundle install
 ```ruby
 class UserSerializer < ActiveModel::Serializer
   attributes :id, :email, :created_at, :updated_at
+  has_one :workspace
 
   def created_at
     object.created_at&.iso8601
@@ -173,6 +177,50 @@ class UserSerializer < ActiveModel::Serializer
 
   def updated_at
     object.updated_at&.iso8601
+  end
+end
+```
+
+### Workspace Serializer
+**File**: `app/serializers/workspace_serializer.rb`
+```ruby
+class WorkspaceSerializer < ActiveModel::Serializer
+  attributes :id, :name, :created_at, :updated_at
+  has_many :folders
+  has_many :documents
+end
+```
+
+### Folder Serializer
+**File**: `app/serializers/folder_serializer.rb`
+```ruby
+class FolderSerializer < ActiveModel::Serializer
+  attributes :id, :name, :parent_id, :document_count, :created_at, :updated_at
+
+  def document_count
+    object.documents.count
+  end
+end
+```
+
+### Document Serializer
+**File**: `app/serializers/document_serializer.rb`
+```ruby
+class DocumentSerializer < ActiveModel::Serializer
+  attributes :id, :title, :body, :folder_id, :archived_at, :created_at, :updated_at
+  belongs_to :folder
+  has_many :tags
+end
+```
+
+### Tag Serializer
+**File**: `app/serializers/tag_serializer.rb`
+```ruby
+class TagSerializer < ActiveModel::Serializer
+  attributes :id, :name, :document_count, :created_at
+
+  def document_count
+    object.document_count
   end
 end
 ```
@@ -311,6 +359,171 @@ end
 
 ---
 
+## Database Models
+
+### Workspace Model
+**File**: `app/models/workspace.rb`
+```ruby
+class Workspace < ApplicationRecord
+  belongs_to :user
+  has_many :folders, dependent: :destroy
+  has_many :documents, dependent: :destroy
+
+  validates :name, presence: true, length: { maximum: 255 }
+end
+```
+
+**Migration**:
+- `name` (string, not null)
+- `user_id` (references, not null, foreign key)
+- Indexes: `user_id`
+
+### Folder Model
+**File**: `app/models/folder.rb`
+```ruby
+class Folder < ApplicationRecord
+  belongs_to :workspace
+  belongs_to :parent, class_name: "Folder", optional: true
+  has_many :subfolders, class_name: "Folder", foreign_key: :parent_id, dependent: :destroy
+  has_many :documents, dependent: :destroy
+
+  validates :name, presence: true, length: { maximum: 255 }
+  validate :no_circular_references
+
+  def ancestors
+    folder = self
+    ancestors = []
+    while folder.parent_id.present?
+      folder = folder.parent
+      ancestors << folder
+    end
+    ancestors.reverse
+  end
+
+  def path
+    (ancestors + [ self ]).map(&:name).join(" / ")
+  end
+
+  private
+
+  def no_circular_references
+    return unless parent_id.present?
+
+    if parent_id == id
+      errors.add(:parent_id, "can't be self")
+      return
+    end
+
+    current = parent
+    while current.present?
+      if current.id == id
+        errors.add(:parent_id, "would create circular reference")
+        return
+      end
+      current = current.parent
+    end
+  end
+end
+```
+
+**Migration**:
+- `name` (string, not null)
+- `workspace_id` (references, not null, foreign key)
+- `parent_id` (references, foreign key to self)
+- Indexes: `workspace_id`, `parent_id`, `[workspace_id, parent_id]`
+
+### Document Model
+**File**: `app/models/document.rb`
+```ruby
+class Document < ApplicationRecord
+  belongs_to :workspace
+  belongs_to :folder, optional: true
+  has_many :document_tags, dependent: :destroy
+  has_many :tags, through: :document_tags
+
+  validates :title, presence: true, length: { maximum: 255 }
+
+  scope :active, -> { where(archived_at: nil) }
+  scope :archived, -> { where.not(archived_at: nil) }
+  scope :by_folder, ->(folder_id) { where(folder_id: folder_id) }
+  scope :by_tag, ->(tag_name) { joins(:tags).where(tags: { name: tag_name.downcase }) }
+
+  def archive!
+    update!(archived_at: Time.current)
+  end
+
+  def restore!
+    update!(archived_at: nil)
+  end
+
+  def archived?
+    archived_at.present?
+  end
+
+  def body_preview(length = 200)
+    return "" if body.blank?
+    body.truncate(length, separator: " ")
+  end
+end
+```
+
+**Migration**:
+- `title` (string, not null)
+- `body` (text)
+- `workspace_id` (references, not null, foreign key)
+- `folder_id` (references, foreign key)
+- `archived_at` (datetime)
+- Indexes: `workspace_id`, `folder_id`, `archived_at`, `[workspace_id, folder_id]`, `[workspace_id, archived_at]`
+
+### Tag Model
+**File**: `app/models/tag.rb`
+```ruby
+class Tag < ApplicationRecord
+  belongs_to :user
+  has_many :document_tags, dependent: :destroy
+  has_many :documents, through: :document_tags
+
+  validates :name, presence: true, length: { maximum: 50 }
+  validates :name, uniqueness: { scope: :user_id, case_sensitive: false }
+
+  before_validation :normalize_name
+
+  def document_count
+    documents.count
+  end
+
+  private
+
+  def normalize_name
+    self.name = name.downcase.strip if name.present?
+  end
+end
+```
+
+**Migration**:
+- `name` (string, not null)
+- `user_id` (references, not null, foreign key)
+- Indexes: `user_id`, `[user_id, name]` (unique)
+
+### DocumentTag Model
+**File**: `app/models/document_tag.rb`
+```ruby
+class DocumentTag < ApplicationRecord
+  belongs_to :document
+  belongs_to :tag
+
+  validates :document_id, uniqueness: { scope: :tag_id }
+end
+```
+
+**Migration**:
+- `document_id` (references, not null, foreign key)
+- `tag_id` (references, not null, foreign key)
+- `created_at` (datetime, not null)
+- Indexes: `[document_id, tag_id]` (unique)
+
+---
+
 ## CI/CD Setup
 
 ### GitHub Actions
@@ -332,11 +545,16 @@ bin/ci
 
 ### Model Specs
 - `spec/models/user_spec.rb` - 11 examples
+- `spec/models/workspace_spec.rb` - 10 examples
+- `spec/models/folder_spec.rb` - 12 examples
+- `spec/models/document_spec.rb` - 14 examples
+- `spec/models/tag_spec.rb` - 10 examples
+- `spec/models/document_tag_spec.rb` - 6 examples
 
 ### Request Specs
 - `spec/requests/api/v1/auth_spec.rb` - 13 examples
 
-**Total**: 24 examples, 0 failures
+**Total**: 67 examples, 0 failures
 
 ---
 
@@ -350,9 +568,18 @@ ntbk/
 │   │       ├── base_controller.rb
 │   │       └── auth_controller.rb
 │   ├── models/
-│   │   └── user.rb
+│   │   ├── user.rb
+│   │   ├── workspace.rb
+│   │   ├── folder.rb
+│   │   ├── document.rb
+│   │   ├── tag.rb
+│   │   └── document_tag.rb
 │   ├── serializers/
-│   │   └── user_serializer.rb
+│   │   ├── user_serializer.rb
+│   │   ├── workspace_serializer.rb
+│   │   ├── folder_serializer.rb
+│   │   ├── document_serializer.rb
+│   │   └── tag_serializer.rb
 │   └── services/
 │       └── jwt_service.rb
 ├── config/
@@ -362,18 +589,34 @@ ntbk/
 │   └── routes.rb
 ├── db/
 │   └── migrate/
-│       └── devise_create_users.rb
+│       ├── devise_create_users.rb
+│       ├── create_workspaces.rb
+│       ├── create_folders.rb
+│       ├── create_documents.rb
+│       ├── create_tags.rb
+│       └── create_document_tags.rb
 ├── spec/
 │   ├── factories/
-│   │   └── users.rb
+│   │   ├── users.rb
+│   │   ├── workspaces.rb
+│   │   ├── folders.rb
+│   │   ├── documents.rb
+│   │   ├── tags.rb
+│   │   └── document_tags.rb
 │   ├── models/
-│   │   └── user_spec.rb
+│   │   ├── user_spec.rb
+│   │   ├── workspace_spec.rb
+│   │   ├── folder_spec.rb
+│   │   ├── document_spec.rb
+│   │   ├── tag_spec.rb
+│   │   └── document_tag_spec.rb
 │   ├── requests/api/v1/
 │   │   └── auth_spec.rb
 │   └── support/
 │       └── api_helpers.rb
 ├── .github/workflows/
 │   └── ci.yml
+├── DEVELOPMENT.md
 └── Gemfile
 ```
 
@@ -381,10 +624,11 @@ ntbk/
 
 ## Next Steps
 
-- [ ] Create Workspace model
-- [ ] Create Folder model
-- [ ] Create Document model
-- [ ] Create Tag model
+- [x] Create Workspace model
+- [x] Create Folder model
+- [x] Create Document model
+- [x] Create Tag model
 - [ ] Implement full-text search
+- [ ] Add API controllers for CRUD operations
 - [ ] Add API versioning
 - [ ] Deploy to production
