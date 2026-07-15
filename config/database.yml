@@ -1,0 +1,55 @@
+# PostgreSQL. Versions 9.3 and up are supported.
+#
+# Install the pg gem:
+#   gem install pg
+#
+# On macOS, you may need to set the following environment variable:
+#   export PATH="/usr/local/opt/libpq/bin:$PATH"
+#
+# On Windows, you may need to set the following environment variable:
+#   set PATH=%PATH%;C:\Program Files\PostgreSQL\bin
+#
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+
+development:
+  <<: *default
+  database: ntbk_development
+  username: <%= ENV.fetch("DB_USERNAME") { "postgres" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "" } %>
+  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+
+# Warning: The database defined as "test" will be erased and
+# re-generated from your development database when you run "rake".
+# Do not set this db to the same as development or production.
+test:
+  <<: *default
+  database: ntbk_test
+  username: <%= ENV.fetch("DB_USERNAME") { "postgres" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "" } %>
+  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+
+# Store production database in the storage/ directory, which by default
+# is mounted as a persistent Docker volume in config/deploy.yml.
+production:
+  primary:
+    <<: *default
+    database: ntbk_production
+    username: <%= ENV.fetch("DB_USERNAME") { "ntbk" } %>
+    password: <%= ENV.fetch("DB_PASSWORD") { "" } %>
+    host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+  cache:
+    <<: *default
+    database: ntbk_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: ntbk_queue
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: ntbk_cable
+    migrations_paths: db/cable_migrate
