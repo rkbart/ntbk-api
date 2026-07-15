@@ -3,4 +3,21 @@ class User < ApplicationRecord
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
+
+  # Validations
+  validates :email, presence: true, uniqueness: { case_sensitive: false }
+  validates :password, length: { minimum: 6 }, if: :password_required?
+
+  # Callbacks
+  before_save :downcase_email
+
+  private
+
+  def downcase_email
+    self.email = email.downcase if email.present?
+  end
+
+  def password_required?
+    new_record? || password.present?
+  end
 end
