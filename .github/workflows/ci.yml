@@ -86,4 +86,4 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/ntbk_test
         run: |
           bin/rails db:create db:migrate
-          bin/rails test
+          bundle exec rspec
