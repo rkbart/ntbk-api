@@ -28,7 +28,7 @@ module Api
           case @attachment.content_type
           when /^image\//
             image_preview
-          when 'application/pdf'
+          when "application/pdf"
             pdf_preview
           when /^text\//
             text_preview
@@ -39,16 +39,16 @@ module Api
 
         def image_preview
           {
-            type: 'image',
-            dimensions: @attachment.metadata['dimensions'],
+            type: "image",
+            dimensions: @attachment.metadata["dimensions"],
             preview_url: @attachment.thumbnail.attached? ? @attachment.thumbnail.url : nil
           }
         end
 
         def pdf_preview
           {
-            type: 'pdf',
-            page_count: @attachment.metadata['page_count'],
+            type: "pdf",
+            page_count: @attachment.metadata["page_count"],
             preview_url: @attachment.thumbnail.attached? ? @attachment.thumbnail.url : nil
           }
         end
@@ -56,7 +56,7 @@ module Api
         def text_preview
           content = @attachment.file.download
           {
-            type: 'text',
+            type: "text",
             content_type: @attachment.content_type,
             content: content.truncate(1000)
           }

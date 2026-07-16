@@ -16,7 +16,7 @@ class Attachment < ApplicationRecord
   validates :file_size, presence: true, numericality: { less_than_or_equal_to: MAX_FILE_SIZE }
   validate :file_present
 
-  enum :preview_state, { pending: 'pending', processing: 'processing', completed: 'completed', failed: 'failed' }, prefix: :preview
+  enum :preview_state, { pending: "pending", processing: "processing", completed: "completed", failed: "failed" }, prefix: :preview
 
   scope :by_type, ->(type) { where(content_type: type) }
   scope :images, -> { where("content_type LIKE ?", "image/%") }
@@ -24,19 +24,19 @@ class Attachment < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
 
   def image?
-    content_type.start_with?('image/')
+    content_type.start_with?("image/")
   end
 
   def pdf?
-    content_type == 'application/pdf'
+    content_type == "application/pdf"
   end
 
   def text?
-    content_type.start_with?('text/')
+    content_type.start_with?("text/")
   end
 
   def human_file_size
-    return '0 B' if file_size.zero?
+    return "0 B" if file_size.zero?
 
     units = %w[B KB MB GB TB]
     exp = (Math.log(file_size) / Math.log(1024)).to_i
@@ -46,7 +46,7 @@ class Attachment < ApplicationRecord
   end
 
   def file_extension
-    File.extname(filename).delete('.').downcase
+    File.extname(filename).delete(".").downcase
   end
 
   private

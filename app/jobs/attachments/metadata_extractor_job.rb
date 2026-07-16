@@ -11,7 +11,7 @@ module Attachments
       case attachment.content_type
       when /^image\//
         extract_image_metadata(attachment, metadata)
-      when 'application/pdf'
+      when "application/pdf"
         extract_pdf_metadata(attachment, metadata)
       when /^text\//
         extract_text_metadata(attachment, metadata)
@@ -19,7 +19,7 @@ module Attachments
 
       # Always add checksum
       checksum = Digest::SHA256.hexdigest(attachment.file.download)
-      metadata['checksum'] = checksum
+      metadata["checksum"] = checksum
 
       attachment.update!(metadata: metadata)
     end
@@ -29,20 +29,20 @@ module Attachments
     def extract_image_metadata(attachment, metadata)
       attachment.file.open do |tempfile|
         image = MiniMagick::Image.open(tempfile.path)
-        metadata['dimensions'] = { 'width' => image.width, 'height' => image.height }
-        metadata['colorspace'] = image.data['colorspace']
+        metadata["dimensions"] = { "width" => image.width, "height" => image.height }
+        metadata["colorspace"] = image.data["colorspace"]
       end
     end
 
     def extract_pdf_metadata(attachment, metadata)
       # Simplified - in production use a PDF library like PDF::Reader
-      metadata['page_count'] = 1
+      metadata["page_count"] = 1
     end
 
     def extract_text_metadata(attachment, metadata)
       content = attachment.file.download
-      metadata['line_count'] = content.lines.count
-      metadata['char_count'] = content.length
+      metadata["line_count"] = content.lines.count
+      metadata["char_count"] = content.length
     end
   end
 end

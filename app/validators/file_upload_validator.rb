@@ -1,36 +1,36 @@
 class FileUploadValidator
   ALLOWED_TYPES = {
     # Images
-    'image/jpeg' => { ext: %w[jpg jpeg], max: 10.megabytes },
-    'image/png' => { ext: %w[png], max: 10.megabytes },
-    'image/gif' => { ext: %w[gif], max: 10.megabytes },
-    'image/webp' => { ext: %w[webp], max: 10.megabytes },
-    'image/svg+xml' => { ext: %w[svg], max: 1.megabyte },
+    "image/jpeg" => { ext: %w[jpg jpeg], max: 10.megabytes },
+    "image/png" => { ext: %w[png], max: 10.megabytes },
+    "image/gif" => { ext: %w[gif], max: 10.megabytes },
+    "image/webp" => { ext: %w[webp], max: 10.megabytes },
+    "image/svg+xml" => { ext: %w[svg], max: 1.megabyte },
 
     # Documents
-    'application/pdf' => { ext: %w[pdf], max: 50.megabytes },
+    "application/pdf" => { ext: %w[pdf], max: 50.megabytes },
 
     # Text
-    'text/plain' => { ext: %w[txt], max: 1.megabyte },
-    'text/markdown' => { ext: %w[md markdown], max: 1.megabyte },
-    'text/csv' => { ext: %w[csv], max: 5.megabytes },
-    'text/html' => { ext: %w[html htm], max: 5.megabytes },
-    'text/css' => { ext: %w[css], max: 1.megabyte },
-    'text/javascript' => { ext: %w[js], max: 5.megabytes },
+    "text/plain" => { ext: %w[txt], max: 1.megabyte },
+    "text/markdown" => { ext: %w[md markdown], max: 1.megabyte },
+    "text/csv" => { ext: %w[csv], max: 5.megabytes },
+    "text/html" => { ext: %w[html htm], max: 5.megabytes },
+    "text/css" => { ext: %w[css], max: 1.megabyte },
+    "text/javascript" => { ext: %w[js], max: 5.megabytes },
 
     # Code
-    'application/json' => { ext: %w[json], max: 5.megabytes },
-    'application/xml' => { ext: %w[xml], max: 5.megabytes },
-    'application/yaml' => { ext: %w[yaml yml], max: 1.megabyte },
+    "application/json" => { ext: %w[json], max: 5.megabytes },
+    "application/xml" => { ext: %w[xml], max: 5.megabytes },
+    "application/yaml" => { ext: %w[yaml yml], max: 1.megabyte },
 
     # Archives
-    'application/zip' => { ext: %w[zip], max: 50.megabytes },
-    'application/gzip' => { ext: %w[gz], max: 50.megabytes }
+    "application/zip" => { ext: %w[zip], max: 50.megabytes },
+    "application/gzip" => { ext: %w[gz], max: 50.megabytes }
   }.freeze
 
   def self.validate!(file)
     content_type = file.content_type
-    extension = File.extname(file.original_filename).delete('.').downcase
+    extension = File.extname(file.original_filename).delete(".").downcase
 
     # Check content type is allowed
     unless ALLOWED_TYPES.key?(content_type)

@@ -3,7 +3,7 @@ module Api
     class AttachmentsController < BaseController
       before_action :set_workspace
       before_action :set_document
-      before_action :set_attachment, only: [:show, :destroy]
+      before_action :set_attachment, only: [ :show, :destroy ]
 
       # GET /api/v1/workspaces/:workspace_id/documents/:document_id/attachments
       def index

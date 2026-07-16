@@ -25,8 +25,8 @@ Rails.application.routes.draw do
 
           resources :attachments, only: [ :index, :show, :create, :destroy ] do
             member do
-              get :download, to: 'attachments/download#show'
-              get :preview, to: 'attachments/preview#show'
+              get :download, to: "attachments/download#show"
+              get :preview, to: "attachments/preview#show"
             end
           end
         end
