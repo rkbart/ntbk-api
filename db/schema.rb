@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_16_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -126,6 +126,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
   end
 
+  create_table "oauth_identities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "metadata", default: {}
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["provider", "uid"], name: "index_oauth_identities_on_provider_and_uid", unique: true
+    t.index ["user_id"], name: "index_oauth_identities_on_user_id"
+  end
+
   create_table "tags", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -166,6 +177,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
   add_foreign_key "folders", "folders", column: "parent_id"
   add_foreign_key "folders", "workspaces"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "oauth_identities", "users"
   add_foreign_key "tags", "users"
   add_foreign_key "workspaces", "users"
 end

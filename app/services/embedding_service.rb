@@ -2,8 +2,8 @@ class EmbeddingService
   CHUNK_SIZE = 1000  # Characters per chunk
   CHUNK_OVERLAP = 200
 
-  def initialize
-    @client = OllamaClient.new
+  def initialize(provider: nil)
+    @client = LlmClientFactory.create(provider)
   end
 
   # Generate embedding for a document
@@ -14,7 +14,7 @@ class EmbeddingService
     # Check if pgvector is available
     begin
       embedding = @client.embed(text)
-      document.update!(embedding: embedding)
+      document.update!(embedding: embedding) if embedding.present?
     rescue => e
       Rails.logger.warn "Failed to generate embedding: #{e.message}"
       nil
@@ -25,7 +25,7 @@ class EmbeddingService
   def embed_documents(documents)
     documents.find_each do |document|
       embed_document(document)
-      sleep(0.1)  # Rate limiting for local Ollama
+      sleep(0.1)  # Rate limiting
     end
   end
 
@@ -34,6 +34,7 @@ class EmbeddingService
     # Check if pgvector is available
     begin
       query_embedding = @client.embed(query)
+      return [] if query_embedding.nil?
 
       Document.joins(:workspace)
               .where(workspaces: { user_id: workspace.user_id })

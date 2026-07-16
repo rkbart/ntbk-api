@@ -43,6 +43,18 @@ RSpec.configure do |config|
     /\/vendor\//,
     /\/node_modules\//
   ]
+
+  # Configure OmniAuth for testing
+  OmniAuth.config.test_mode = true
+  OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new({
+    provider: 'google_oauth2',
+    uid: '12345',
+    info: {
+      email: 'test@example.com',
+      name: 'Test User',
+      image: 'https://example.com/photo.jpg'
+    }
+  })
 end
 
 # Shoulda Matchers (optional - add later if needed)
