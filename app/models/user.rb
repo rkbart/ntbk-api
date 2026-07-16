@@ -7,6 +7,7 @@ class User < ApplicationRecord
   # Associations
   has_many :workspaces, dependent: :destroy
   has_many :tags, dependent: :destroy
+  has_many :conversations, dependent: :destroy
 
   # Validations
   validates :email, presence: true, uniqueness: { case_sensitive: false }
