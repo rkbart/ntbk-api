@@ -22,6 +22,13 @@ Rails.application.routes.draw do
             post :archive
             post :restore
           end
+
+          resources :attachments, only: [ :index, :show, :create, :destroy ] do
+            member do
+              get :download, to: 'attachments/download#show'
+              get :preview, to: 'attachments/preview#show'
+            end
+          end
         end
       end
     end

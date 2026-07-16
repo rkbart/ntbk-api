@@ -599,6 +599,18 @@ bin/ci
 - `per_page` (default: 20, max: 100): Items per page
 - `archived` (default: false): Include archived documents
 
+### Attachments Controller
+**File**: `app/controllers/api/v1/attachments_controller.rb`
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | /api/v1/workspaces/:workspace_id/documents/:document_id/attachments | List attachments | Yes |
+| GET | /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id | Get attachment | Yes |
+| POST | /api/v1/workspaces/:workspace_id/documents/:document_id/attachments | Upload file | Yes |
+| DELETE | /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id | Delete attachment | Yes |
+| GET | /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id/download | Download file | Yes |
+| GET | /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id/preview | Get preview | Yes |
+
 ---
 
 ## Test Coverage
@@ -610,6 +622,7 @@ bin/ci
 - `spec/models/document_spec.rb` - 14 examples
 - `spec/models/tag_spec.rb` - 10 examples
 - `spec/models/document_tag_spec.rb` - 6 examples
+- `spec/models/attachment_spec.rb` - 11 examples
 
 ### Request Specs
 - `spec/requests/api/v1/auth_spec.rb` - 13 examples
@@ -618,8 +631,9 @@ bin/ci
 - `spec/requests/api/v1/documents_spec.rb` - 11 examples
 - `spec/requests/api/v1/tags_spec.rb` - 4 examples
 - `spec/requests/api/v1/search_spec.rb` - 9 examples
+- `spec/requests/api/v1/attachments_spec.rb` - 4 examples
 
-**Total**: 105 examples, 0 failures
+**Total**: 120 examples, 0 failures
 
 ---
 
@@ -636,24 +650,34 @@ ntbk/
 │   │       ├── folders_controller.rb
 │   │       ├── documents_controller.rb
 │   │       ├── tags_controller.rb
-│   │       └── search_controller.rb
+│   │       ├── search_controller.rb
+│   │       └── attachments_controller.rb
+│   │   └── attachments/
+│   │       ├── download_controller.rb
+│   │       └── preview_controller.rb
 │   ├── models/
 │   │   ├── user.rb
 │   │   ├── workspace.rb
 │   │   ├── folder.rb
 │   │   ├── document.rb
 │   │   ├── tag.rb
-│   │   └── document_tag.rb
+│   │   ├── document_tag.rb
+│   │   └── attachment.rb
 │   ├── serializers/
 │   │   ├── user_serializer.rb
 │   │   ├── workspace_serializer.rb
 │   │   ├── folder_serializer.rb
 │   │   ├── document_serializer.rb
 │   │   ├── tag_serializer.rb
-│   │   └── search_result_serializer.rb
-│   └── services/
-│       ├── jwt_service.rb
-│       └── search_service.rb
+│   │   ├── search_result_serializer.rb
+│   │   └── attachment_serializer.rb
+│   ├── services/
+│   │   ├── jwt_service.rb
+│   │   └── search_service.rb
+│   └── jobs/
+│       └── attachments/
+│           ├── thumbnail_generator_job.rb
+│           └── metadata_extractor_job.rb
 ├── config/
 │   ├── initializers/
 │   │   ├── cors.rb
@@ -674,21 +698,24 @@ ntbk/
 │   │   ├── folders.rb
 │   │   ├── documents.rb
 │   │   ├── tags.rb
-│   │   └── document_tags.rb
+│   │   ├── document_tags.rb
+│   │   └── attachments.rb
 │   ├── models/
 │   │   ├── user_spec.rb
 │   │   ├── workspace_spec.rb
 │   │   ├── folder_spec.rb
 │   │   ├── document_spec.rb
 │   │   ├── tag_spec.rb
-│   │   └── document_tag_spec.rb
+│   │   ├── document_tag_spec.rb
+│   │   └── attachment_spec.rb
 │   ├── requests/api/v1/
 │   │   ├── auth_spec.rb
 │   │   ├── workspaces_spec.rb
 │   │   ├── folders_spec.rb
 │   │   ├── documents_spec.rb
 │   │   ├── tags_spec.rb
-│   │   └── search_spec.rb
+│   │   ├── search_spec.rb
+│   │   └── attachments_spec.rb
 │   └── support/
 │       └── api_helpers.rb
 ├── .github/workflows/
@@ -696,6 +723,121 @@ ntbk/
 ├── DEVELOPMENT.md
 └── Gemfile
 ```
+
+---
+
+## File Uploads Implementation (Milestone 4)
+
+### Installation
+```bash
+# Add rack-attack to Gemfile
+echo 'gem "rack-attack"' >> Gemfile
+bundle install
+
+# Install Active Storage migrations
+bin/rails active_storage:install
+```
+
+### Database Setup
+
+**Tables**:
+- `active_storage_blobs` - File metadata (Active Storage)
+- `active_storage_attachments` - Join table (Active Storage)
+- `attachments` - Custom attachment metadata
+
+**Columns on attachments**:
+- `document_id` (references, not null, foreign key)
+- `filename` (string, not null)
+- `content_type` (string, not null)
+- `file_size` (bigint, not null)
+- `metadata` (jsonb, default: {})
+- `preview_state` (string, default: 'pending')
+
+**Indexes**:
+- `document_id` - For efficient document lookups
+- `content_type` - For type filtering
+- `preview_state` - For preview status queries
+
+### Model Changes
+
+**File**: `app/models/attachment.rb`
+```ruby
+class Attachment < ApplicationRecord
+  MAX_FILE_SIZE = 50.megabytes
+  ALLOWED_CONTENT_TYPES = %w[
+    image/jpeg image/png image/gif image/webp image/svg+xml
+    application/pdf
+    text/plain text/markdown text/csv text/html text/css text/javascript
+    application/json application/zip application/gzip
+  ].freeze
+
+  belongs_to :document, counter_cache: :attachments_count
+  has_one_attached :file
+  has_one_attached :thumbnail
+
+  validates :filename, presence: true, length: { maximum: 255 }
+  validates :content_type, presence: true, inclusion: { in: ALLOWED_CONTENT_TYPES }
+  validates :file_size, presence: true, numericality: { less_than_or_equal_to: MAX_FILE_SIZE }
+  validate :file_present
+
+  enum :preview_state, { pending: 'pending', processing: 'processing', completed: 'completed', failed: 'failed' }, prefix: :preview
+
+  scope :images, -> { where("content_type LIKE ?", "image/%") }
+  scope :documents, -> { where("content_type LIKE ? OR content_type LIKE ?", "application/pdf", "text/%") }
+end
+```
+
+**File**: `app/models/document.rb` (additions)
+```ruby
+has_many :attachments, dependent: :destroy
+
+def image_attachments
+  attachments.images
+end
+
+def attachments_size_sum
+  attachments.sum(:file_size)
+end
+```
+
+### API Endpoints
+
+**Attachments**:
+- `GET /api/v1/workspaces/:workspace_id/documents/:document_id/attachments` - List
+- `POST /api/v1/workspaces/:workspace_id/documents/:document_id/attachments` - Upload
+- `GET /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id` - Show
+- `DELETE /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id` - Delete
+- `GET /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id/download` - Download
+- `GET /api/v1/workspaces/:workspace_id/documents/:document_id/attachments/:id/preview` - Preview
+
+### File Size Limits
+
+| Type | Limit | Rationale |
+|------|-------|-----------|
+| Images | 10 MB | Reasonable for photos/screenshots |
+| PDFs | 50 MB | Documents can be large |
+| Text | 1 MB | Text files should be small |
+| Archives | 50 MB | Compressed files |
+
+### Preview Strategy
+
+| File Type | Preview | Thumbnail |
+|-----------|---------|-----------|
+| Images | Dimensions + original URL | 300x300 resize |
+| PDFs | Page count + first page | First page as PNG |
+| Text | First 1000 chars | None |
+
+### Security Measures
+
+- **Content-type allowlist**: Only approved file types
+- **File size limits**: Per-type limits enforced
+- **Access control**: Attachments scoped to user's workspaces
+- **Rate limiting**: 10 uploads/minute per IP (via rack-attack)
+
+### Background Jobs
+
+- `Attachments::ThumbnailGeneratorJob` - Generates thumbnails for images/PDFs
+- `Attachments::MetadataExtractorJob` - Extracts metadata (dimensions, checksum, etc.)
 
 ---
 
