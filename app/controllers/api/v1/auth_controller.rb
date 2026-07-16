@@ -1,7 +1,7 @@
 module Api
   module V1
     class AuthController < BaseController
-      skip_before_action :authenticate_user!, only: [ :register, :login ]
+      skip_before_action :authenticate_user!, only: [ :register, :login, :google_callback ]
 
       # POST /api/v1/auth/register
       def register
@@ -32,6 +32,22 @@ module Api
           }
         else
           unauthorized!("Invalid email or password")
+        end
+      end
+
+      # POST /api/v1/auth/google
+      def google_callback
+        # This endpoint is called after OmniAuth callback
+        # The user should already be authenticated via OmniAuth
+        if current_user
+          token = JwtService.encode(user_id: current_user.id)
+          render json: {
+            data: UserSerializer.new(current_user).as_json,
+            token: token,
+            expires_at: 24.hours.from_now.iso8601
+          }
+        else
+          unauthorized!("Google authentication failed")
         end
       end
 

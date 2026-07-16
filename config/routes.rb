@@ -1,4 +1,7 @@
 Rails.application.routes.draw do
+  # Devise routes for OmniAuth
+  devise_for :users, controllers: { omniauth_callbacks: "users/omniauth_callbacks" }
+
   namespace :api do
     namespace :v1 do
       # Authentication
@@ -7,6 +10,7 @@ Rails.application.routes.draw do
       get "auth/me", to: "auth#me"
       patch "auth/me", to: "auth#update_profile"
       post "auth/refresh", to: "auth#refresh"
+      post "auth/google", to: "auth#google_callback"
 
       # Search
       get "search", to: "search#index"

@@ -6,9 +6,9 @@ class ChatService
     Be concise and helpful. Use markdown formatting when appropriate.
   PROMPT
 
-  def initialize(conversation)
+  def initialize(conversation, provider: nil)
     @conversation = conversation
-    @client = OllamaClient.new
+    @client = LlmClientFactory.create(provider)
   end
 
   # Send a message and get response
@@ -24,7 +24,7 @@ class ChatService
     messages = build_messages(content, document_ids)
 
     # Get AI response
-    response_content = @client.chat(messages, temperature: 0.7, num_ctx: 4096)
+    response_content = @client.chat(messages, temperature: 0.7, max_tokens: 4096)
 
     # Save assistant message
     assistant_message = @conversation.messages.create!(
@@ -49,7 +49,7 @@ class ChatService
     messages = build_messages(content, document_ids)
     full_response = ""
 
-    @client.chat_stream(messages, { temperature: 0.7, num_ctx: 4096 }) do |chunk|
+    @client.chat_stream(messages, { temperature: 0.7, max_tokens: 4096 }) do |chunk|
       full_response += chunk
       yield chunk if block_given?
     end

@@ -6,17 +6,12 @@ class SummaryService
     Do not include headers, bullet points, or formatting - just plain text.
   PROMPT
 
-  def initialize
-    @client = OllamaClient.new
+  def initialize(provider: nil)
+    @client = LlmClientFactory.create(provider)
   end
 
   # Generate summary for a document
   def generate_summary(document)
-    Rails.logger.debug "SummaryService: document class = #{document.class}"
-    Rails.logger.debug "SummaryService: document object_id = #{document.object_id}"
-    Rails.logger.debug "SummaryService: document.respond_to?(:summary) = #{document.respond_to?(:summary)}"
-    Rails.logger.debug "SummaryService: document.class.method(:summary) rescue #{$!}"
-
     # Check if document is a String (shouldn't be)
     if document.is_a?(String)
       Rails.logger.error "SummaryService: ERROR - document is a String, not a Document!"
@@ -34,8 +29,8 @@ class SummaryService
       { role: "user", content: "Please summarize this document:\n\n#{content.truncate(6000)}" }
     ]
 
-    summary = @client.chat(messages, temperature: 0.3, num_predict: 200)
-    document.update!(summary: summary, summary_generated_at: Time.current)
+    summary = @client.chat(messages, temperature: 0.3, max_tokens: 200)
+    document.update!(summary: summary, summary_generated_at: Time.current) if summary.present?
 
     summary
   end
@@ -43,7 +38,7 @@ class SummaryService
   # Generate summaries for multiple documents
   def generate_summaries(documents)
     documents.find_each do |document|
-      next unless document.needs_summary?
+      next unless document.respond_to?(:needs_summary?) && document.needs_summary?
       generate_summary(document)
       sleep(0.5)  # Rate limiting
     end

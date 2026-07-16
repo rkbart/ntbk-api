@@ -10,12 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_16_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
-  # Note: vector extension is optional and may not be available in CI
-  # enable_extension "vector"
+  enable_extension "vector"
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
@@ -84,8 +83,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
     t.integer "attachments_count", default: 0, null: false
     t.text "body"
     t.datetime "created_at", null: false
-    # Note: embedding column is optional and requires pgvector extension
-    # t.vector "embedding", limit: 768
+    t.vector "embedding", limit: 768
     t.bigint "folder_id"
     t.tsvector "search_vector"
     t.text "summary"
@@ -93,8 +91,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.bigint "workspace_id", null: false
-    # Note: embedding index is optional and requires pgvector extension
-    # t.index ["embedding"], name: "index_documents_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
+    t.index ["embedding"], name: "index_documents_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
     t.index ["folder_id"], name: "index_documents_on_folder_id"
     t.index ["search_vector"], name: "index_documents_on_search_vector", using: :gin
     t.index ["title", "body"], name: "index_documents_on_title_body_trigram", opclass: :gin_trgm_ops, using: :gin
@@ -124,6 +121,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
     t.datetime "updated_at", null: false
     t.index ["conversation_id", "created_at"], name: "index_messages_on_conversation_id_and_created_at"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+  end
+
+  create_table "oauth_identities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "metadata", default: {}
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["provider", "uid"], name: "index_oauth_identities_on_provider_and_uid", unique: true
+    t.index ["user_id"], name: "index_oauth_identities_on_user_id"
   end
 
   create_table "tags", force: :cascade do |t|
@@ -166,6 +174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
   add_foreign_key "folders", "folders", column: "parent_id"
   add_foreign_key "folders", "workspaces"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "oauth_identities", "users"
   add_foreign_key "tags", "users"
   add_foreign_key "workspaces", "users"
 end
