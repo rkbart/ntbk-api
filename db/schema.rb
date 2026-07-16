@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_15_085225) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_16_044502) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_trgm"
 
   create_table "document_tags", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -28,10 +29,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_085225) do
     t.text "body"
     t.datetime "created_at", null: false
     t.bigint "folder_id"
+    t.tsvector "search_vector"
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.bigint "workspace_id", null: false
     t.index ["folder_id"], name: "index_documents_on_folder_id"
+    t.index ["search_vector"], name: "index_documents_on_search_vector", using: :gin
+    t.index ["title", "body"], name: "index_documents_on_title_body_trigram", opclass: :gin_trgm_ops, using: :gin
     t.index ["workspace_id", "archived_at"], name: "index_documents_on_workspace_id_and_archived_at"
     t.index ["workspace_id", "folder_id"], name: "index_documents_on_workspace_id_and_folder_id"
     t.index ["workspace_id"], name: "index_documents_on_workspace_id"

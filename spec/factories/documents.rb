@@ -11,5 +11,10 @@ FactoryBot.define do
     trait :in_folder do
       folder
     end
+
+    trait :with_searchable_content do
+      title { Faker::Lorem.sentence(word_count: 5) }
+      body { Faker::Lorem.paragraphs(number: 3).join("\n\n") }
+    end
   end
 end
