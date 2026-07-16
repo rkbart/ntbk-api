@@ -17,6 +17,9 @@ class OllamaClient
     })
 
     response["embeddings"].first
+  rescue => e
+    Rails.logger.error "Ollama embed error: #{e.message}"
+    nil
   end
 
   # Generate chat completion (non-streaming)
@@ -29,6 +32,9 @@ class OllamaClient
     })
 
     response.dig("message", "content")
+  rescue => e
+    Rails.logger.error "Ollama chat error: #{e.message}"
+    nil
   end
 
   # Generate chat completion (streaming via HTTP)

@@ -9,6 +9,6 @@ class CreateConversations < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :conversations, [:user_id, :last_message_at]
+    add_index :conversations, [ :user_id, :last_message_at ]
   end
 end

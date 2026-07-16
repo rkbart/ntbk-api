@@ -7,7 +7,12 @@ class Document < ApplicationRecord
   has_many :tags, through: :document_tags
   has_many :attachments, dependent: :destroy
 
-  has_neighbors :embedding
+  # pgvector support (optional - requires pgvector extension)
+  begin
+    has_neighbors :embedding
+  rescue => e
+    # pgvector not available, embedding features will be disabled
+  end
 
   validates :title, presence: true, length: { maximum: 255 }
 
@@ -17,7 +22,7 @@ class Document < ApplicationRecord
 
   def embedding_text
     # Combine title + body for embedding, truncated to fit context
-    text = [title, body].compact.join("\n\n")
+    text = [ title, body ].compact.join("\n\n")
     text.truncate(2000, separator: " ")
   end
 

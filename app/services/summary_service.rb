@@ -26,7 +26,7 @@ class SummaryService
 
     return document.summary if document.respond_to?(:summary) && document.summary.present? && !document.needs_summary?
 
-    content = [document.title, document.body].compact.join("\n\n")
+    content = [ document.title, document.body ].compact.join("\n\n")
     return nil if content.blank?
 
     messages = [

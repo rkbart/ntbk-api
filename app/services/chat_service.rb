@@ -66,7 +66,7 @@ class ChatService
   private
 
   def build_messages(content, document_ids)
-    messages = [{ role: "system", content: SYSTEM_PROMPT }]
+    messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 
     # Add document context if provided
     if document_ids.present?
