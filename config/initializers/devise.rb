@@ -284,7 +284,7 @@ Devise.setup do |config|
 
   # ==> API mode configuration
   # Skip session storage for API mode
-  config.skip_session_storage = [:cookies]
+  config.skip_session_storage = [ :cookies ]
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or
