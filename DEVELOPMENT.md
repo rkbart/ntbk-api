@@ -633,7 +633,7 @@ bin/ci
 - `spec/requests/api/v1/search_spec.rb` - 9 examples
 - `spec/requests/api/v1/attachments_spec.rb` - 4 examples
 
-**Total**: 120 examples, 0 failures
+**Total**: 131 examples, 0 failures
 
 ---
 
@@ -838,6 +838,152 @@ end
 
 - `Attachments::ThumbnailGeneratorJob` - Generates thumbnails for images/PDFs
 - `Attachments::MetadataExtractorJob` - Extracts metadata (dimensions, checksum, etc.)
+
+---
+
+## AI Features Implementation (Milestone 5)
+
+### Overview
+
+NTBK integrates with Ollama for local AI inference, providing:
+- **Embeddings** - Document embeddings for semantic search via pgvector
+- **Chat** - Conversational AI interface with document context
+- **Summaries** - Auto-generate document summaries
+
+### Installation
+
+```bash
+# Install Ollama (if not already installed)
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull required models
+ollama pull nomic-embed-text  # For embeddings (768 dimensions)
+ollama pull llama3:8b         # For chat and summaries
+
+# Add neighbor gem to Gemfile
+echo 'gem "neighbor"' >> Gemfile
+bundle install
+
+# Install pgvector extension (Arch Linux)
+sudo pacman -S pgvector
+
+# Run migrations
+bin/rails db:migrate
+```
+
+### Configuration
+
+**Environment Variables** (`.env.example`):
+```bash
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_CHAT_MODEL=llama3:8b
+OLLAMA_TIMEOUT=60
+OLLAMA_VERIFY_ON_BOOT=true
+```
+
+**Initializer**: `config/initializers/ollama.rb`
+
+### Database Schema
+
+**New Extensions**:
+- `pgvector` - Vector similarity search
+
+**New Columns on documents**:
+- `embedding` (vector, 768 dimensions) - Document embedding vector
+- `summary` (text) - AI-generated summary
+- `summary_generated_at` (datetime) - When summary was generated
+
+**New Tables**:
+- `conversations` - Chat conversation history
+- `messages` - Individual chat messages with role (user/assistant/system)
+
+### Models
+
+**Document** (additions):
+```ruby
+has_neighbors :embedding
+
+def needs_summary?
+  summary.nil? || updated_at > summary_generated_at
+end
+
+def embedding_text
+  [title, body].compact.join("\n\n").truncate(2000, separator: " ")
+end
+```
+
+**Conversation**:
+- `belongs_to :user`
+- `has_many :messages`
+- `scope :recent` - Orders by last_message_at
+
+**Message**:
+- `belongs_to :conversation`
+- `validates :role, inclusion: %w[user assistant system]`
+- `scope :chronological` - Orders by created_at
+
+### Services
+
+**OllamaClient** (`app/services/ollama_client.rb`):
+- `embed(text)` - Generate embedding vector
+- `chat(messages, options)` - Generate chat completion
+- `chat_stream(messages, options, &block)` - Streaming chat
+- `health_check` - Verify Ollama is running
+
+**EmbeddingService** (`app/services/embedding_service.rb`):
+- `embed_document(document)` - Generate embedding for document
+- `embed_documents(documents)` - Batch embedding generation
+- `search(query, workspace:, limit:, threshold:)` - Semantic search
+- `similar_documents(document, limit:)` - Find similar documents
+
+**SummaryService** (`app/services/summary_service.rb`):
+- `generate_summary(document)` - Generate summary for document
+- `generate_summaries(documents)` - Batch summary generation
+
+**ChatService** (`app/services/chat_service.rb`):
+- `send_message(content, document_ids:)` - Send message and get response
+- `send_message_stream(content, document_ids:, &block)` - Streaming response
+
+### API Endpoints
+
+**Embeddings**:
+- `POST /api/v1/ai/embeddings` - Generate embedding for text
+- `POST /api/v1/ai/embeddings/search` - Semantic search in workspace
+- `POST /api/v1/ai/embeddings/similar/:id` - Find similar documents
+- `POST /api/v1/ai/embeddings/generate/:id` - Generate embedding for document
+- `POST /api/v1/ai/embeddings/generate_workspace/:id` - Generate all embeddings
+
+**Chat**:
+- `GET /api/v1/ai/conversations` - List conversations
+- `POST /api/v1/ai/conversations` - Create conversation
+- `GET /api/v1/ai/conversations/:id` - Get conversation with messages
+- `DELETE /api/v1/ai/conversations/:id` - Delete conversation
+- `POST /api/v1/ai/chat` - Send chat message
+- `POST /api/v1/ai/chat/stream` - Send chat message (SSE streaming)
+
+**Summaries**:
+- `GET /api/v1/workspaces/:id/documents/:id/summary` - Get summary
+- `POST /api/v1/workspaces/:id/documents/:id/summary` - Generate summary
+- `POST /api/v1/ai/summaries/generate_workspace/:id` - Generate all summaries
+
+### Background Jobs
+
+- `EmbeddingJob` - Generate embeddings for workspace documents
+- `SummaryJob` - Generate summaries for workspace documents
+- `DocumentEmbeddingJob` - Generate embedding for single document
+
+### Testing
+
+**Prerequisites**:
+- Ollama running locally
+- Models pulled: `nomic-embed-text`, `llama3:8b`
+
+**Run AI-specific tests**:
+```bash
+bundle exec rspec spec/models/conversation_spec.rb
+bundle exec rspec spec/models/message_spec.rb
+```
 
 ---
 

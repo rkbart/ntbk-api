@@ -7,7 +7,19 @@ class Document < ApplicationRecord
   has_many :tags, through: :document_tags
   has_many :attachments, dependent: :destroy
 
+  has_neighbors :embedding
+
   validates :title, presence: true, length: { maximum: 255 }
+
+  def needs_summary?
+    summary.nil? || (summary_generated_at.present? && updated_at > summary_generated_at)
+  end
+
+  def embedding_text
+    # Combine title + body for embedding, truncated to fit context
+    text = [title, body].compact.join("\n\n")
+    text.truncate(2000, separator: " ")
+  end
 
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }

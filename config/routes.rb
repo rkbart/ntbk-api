@@ -21,6 +21,8 @@ Rails.application.routes.draw do
           member do
             post :archive
             post :restore
+            get :summary, to: "ai/summaries#show"
+            post :summary, to: "ai/summaries#create"
           end
 
           resources :attachments, only: [ :index, :show, :create, :destroy ] do
@@ -28,6 +30,33 @@ Rails.application.routes.draw do
               get :download, to: "attachments/download#show"
               get :preview, to: "attachments/preview#show"
             end
+          end
+        end
+      end
+
+      # AI features
+      namespace :ai do
+        # Embeddings
+        resources :embeddings, only: [ :create ] do
+          collection do
+            post :search
+            post :generate_workspace
+          end
+          member do
+            post :similar
+            post :generate
+          end
+        end
+
+        # Chat
+        resources :conversations, only: [ :index, :show, :create, :destroy ]
+        post "chat", to: "chat#send_message"
+        post "chat/stream", to: "chat#send_message_stream"
+
+        # Summaries
+        resources :summaries, only: [ :create ] do
+          collection do
+            post :generate_workspace
           end
         end
       end
