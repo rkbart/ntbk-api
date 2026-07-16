@@ -655,6 +655,11 @@ ntbk/
 │   │   └── attachments/
 │   │       ├── download_controller.rb
 │   │       └── preview_controller.rb
+│   │   └── ai/
+│   │       ├── base_controller.rb
+│   │       ├── embeddings_controller.rb
+│   │       ├── chat_controller.rb
+│   │       └── summaries_controller.rb
 │   ├── models/
 │   │   ├── user.rb
 │   │   ├── workspace.rb
@@ -662,7 +667,9 @@ ntbk/
 │   │   ├── document.rb
 │   │   ├── tag.rb
 │   │   ├── document_tag.rb
-│   │   └── attachment.rb
+│   │   ├── attachment.rb
+│   │   ├── conversation.rb
+│   │   └── message.rb
 │   ├── serializers/
 │   │   ├── user_serializer.rb
 │   │   ├── workspace_serializer.rb
@@ -670,14 +677,23 @@ ntbk/
 │   │   ├── document_serializer.rb
 │   │   ├── tag_serializer.rb
 │   │   ├── search_result_serializer.rb
-│   │   └── attachment_serializer.rb
+│   │   ├── attachment_serializer.rb
+│   │   ├── conversation_serializer.rb
+│   │   └── message_serializer.rb
 │   ├── services/
 │   │   ├── jwt_service.rb
-│   │   └── search_service.rb
+│   │   ├── search_service.rb
+│   │   ├── ollama_client.rb
+│   │   ├── embedding_service.rb
+│   │   ├── summary_service.rb
+│   │   └── chat_service.rb
 │   └── jobs/
-│       └── attachments/
-│           ├── thumbnail_generator_job.rb
-│           └── metadata_extractor_job.rb
+│       ├── attachments/
+│       │   ├── thumbnail_generator_job.rb
+│       │   └── metadata_extractor_job.rb
+│       ├── embedding_job.rb
+│       ├── summary_job.rb
+│       └── document_embedding_job.rb
 ├── config/
 │   ├── initializers/
 │   │   ├── cors.rb
