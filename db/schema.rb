@@ -84,7 +84,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
     t.integer "attachments_count", default: 0, null: false
     t.text "body"
     t.datetime "created_at", null: false
-    t.vector "embedding", limit: 768
+    # Note: embedding column is optional and requires pgvector extension
+    # t.vector "embedding", limit: 768
     t.bigint "folder_id"
     t.tsvector "search_vector"
     t.text "summary"
@@ -92,7 +93,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_075504) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.bigint "workspace_id", null: false
-    t.index ["embedding"], name: "index_documents_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
+    # Note: embedding index is optional and requires pgvector extension
+    # t.index ["embedding"], name: "index_documents_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
     t.index ["folder_id"], name: "index_documents_on_folder_id"
     t.index ["search_vector"], name: "index_documents_on_search_vector", using: :gin
     t.index ["title", "body"], name: "index_documents_on_title_body_trigram", opclass: :gin_trgm_ops, using: :gin
