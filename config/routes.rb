@@ -8,6 +8,9 @@ Rails.application.routes.draw do
       patch "auth/me", to: "auth#update_profile"
       post "auth/refresh", to: "auth#refresh"
 
+      # Search
+      get "search", to: "search#index"
+
       # Tags (global, not nested under workspace)
       resources :tags, only: [ :index, :create, :destroy ]
 
