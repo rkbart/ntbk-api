@@ -55,9 +55,18 @@ class Document < ApplicationRecord
   end
 
   def embedding_text
-    # Combine title + body for embedding, truncated to fit context
-    text = [ title, body ].compact.join("\n\n")
-    text.truncate(2000, separator: " ")
+    # Combine title + body + attachment text for embedding
+    parts = [ title, body ]
+
+    # Include extracted text from attachments
+    attachments.each do |attachment|
+      if attachment.text_extracted? && attachment.extracted_text.present?
+        parts << attachment.extracted_text
+      end
+    end
+
+    text = parts.compact.join("\n\n")
+    text.truncate(6000, separator: " ") # Increased limit for attachment content
   end
 
   def archive!

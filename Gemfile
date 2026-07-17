@@ -76,3 +76,5 @@ group :development, :test do
   gem "factory_bot_rails"
   gem "faker"
 end
+gem "pdf-reader", "~> 2.11"
+gem "docx", "~> 0.8"
