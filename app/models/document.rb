@@ -56,15 +56,15 @@ class Document < ApplicationRecord
 
   def embedding_text
     # Combine title + body + attachment text for embedding
-    parts = [title, body]
-    
+    parts = [ title, body ]
+
     # Include extracted text from attachments
     attachments.each do |attachment|
       if attachment.text_extracted? && attachment.extracted_text.present?
         parts << attachment.extracted_text
       end
     end
-    
+
     text = parts.compact.join("\n\n")
     text.truncate(6000, separator: " ") # Increased limit for attachment content
   end
@@ -101,10 +101,10 @@ class Document < ApplicationRecord
 
   def generate_embedding_if_needed
     # Only generate embedding if embedding column exists and content changed
-    return unless self.class.column_names.include?('embedding')
+    return unless self.class.column_names.include?("embedding")
     return unless saved_change_to_title? || saved_change_to_body?
     return if embedding.present? && !saved_change_to_body?
-    
+
     # Enqueue background job for embedding generation
     DocumentEmbeddingJob.perform_later(self.id) if persisted?
   end

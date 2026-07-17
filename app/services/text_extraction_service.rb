@@ -33,7 +33,7 @@ class TextExtractionService
 
   def extract_from_pdf
     require "pdf/reader"
-    
+
     text_parts = []
     @file.download do |pdf_content|
       reader = PDF::Reader.new(StringIO.new(pdf_content))
@@ -41,7 +41,7 @@ class TextExtractionService
         text_parts << page.text
       end
     end
-    
+
     text_parts.join("\n\n").strip
   rescue => e
     Rails.logger.error "Failed to extract PDF text: #{e.message}"
@@ -50,21 +50,21 @@ class TextExtractionService
 
   def extract_from_docx
     require "docx"
-    
-    temp_file = Tempfile.new(["docx", ".docx"])
+
+    temp_file = Tempfile.new([ "docx", ".docx" ])
     temp_file.binmode
-    
+
     @file.download do |content|
       temp_file.write(content)
     end
     temp_file.rewind
-    
+
     doc = Docx::Document.open(temp_file.path)
     text = doc.paragraphs.map(&:to_s).join("\n")
-    
+
     temp_file.close
     temp_file.unlink
-    
+
     text.strip
   rescue => e
     Rails.logger.error "Failed to extract DOCX text: #{e.message}"
