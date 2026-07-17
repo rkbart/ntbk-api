@@ -640,7 +640,7 @@ bin/ci
 ## File Structure
 
 ```
-ntbk/
+ntbk-api/
 ├── app/
 │   ├── controllers/
 │   │   └── api/v1/

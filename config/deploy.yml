@@ -1,8 +1,8 @@
 # Name of your application. Used to uniquely configure containers.
-service: ntbk
+service: ntbk-api
 
 # Name of the container image (use your-user/app-name on external registries).
-image: ntbk
+image: ntbk-api
 
 # Deploy to these servers.
 servers:
@@ -69,7 +69,7 @@ aliases:
 # Use a persistent storage volume for sqlite database files and local Active Storage files.
 # Recommended to change this to a mounted volume path that is backed up off server.
 volumes:
-  - "ntbk_storage:/rails/storage"
+  - "ntbk-api_storage:/rails/storage"
 
 
 # Configure the image builder.

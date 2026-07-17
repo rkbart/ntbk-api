@@ -78,10 +78,10 @@ This application is designed to be deployed as a Docker container using [Kamal](
 
 ```bash
 # Build the Docker image
-docker build -t ntbk .
+docker build -t ntbk-api .
 
 # Run the container
-docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value> -e DB_USERNAME=<username> -e DB_PASSWORD=<password> -e DB_HOST=<host> --name ntbk ntbk
+docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value> -e DB_USERNAME=<username> -e DB_PASSWORD=<password> -e DB_HOST=<host> --name ntbk-api ntbk-api
 ```
 
 For production deployment with Kamal:
