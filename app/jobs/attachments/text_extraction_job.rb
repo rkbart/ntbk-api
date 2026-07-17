@@ -5,14 +5,14 @@ module Attachments
 
     def perform(attachment_id)
       attachment = Attachment.find(attachment_id)
-
+      
       # Skip if already processed
       return if attachment.metadata["text_extracted"]
-
+      
       # Extract text content
       service = TextExtractionService.new(attachment)
       text_content = service.extract
-
+      
       if text_content.present?
         # Store extracted text in metadata
         attachment.update!(
@@ -23,10 +23,16 @@ module Attachments
             "text_extracted_at" => Time.current.iso8601
           )
         )
-
-        # Update document's embedding_text to include attachment content
-        update_document_embedding_text(attachment.document)
-
+        
+        # Update document body with extracted text (if document body is empty)
+        document = attachment.document
+        if document.body.blank? && text_content.present?
+          document.update!(body: text_content)
+        end
+        
+        # Trigger re-embedding
+        update_document_embedding(document)
+        
         Rails.logger.info "Extracted text from attachment #{attachment_id}: #{text_content.length} chars"
       else
         attachment.update!(
@@ -48,10 +54,9 @@ module Attachments
 
     private
 
-    def update_document_embedding_text(document)
-      # Trigger re-embedding if document has embedding column
+    def update_document_embedding(document)
       if document.class.column_names.include?("embedding")
-        document.update!(embedding: nil) # Clear existing embedding
+        document.update!(embedding: nil)
         DocumentEmbeddingJob.perform_later(document.id)
       end
     end
