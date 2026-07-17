@@ -16,15 +16,8 @@ class Document < ApplicationRecord
 
   validates :title, presence: true, length: { maximum: 255 }
 
-  def needs_summary?
-    summary.nil? || (summary_generated_at.present? && updated_at > summary_generated_at)
-  end
-
-  def embedding_text
-    # Combine title + body for embedding, truncated to fit context
-    text = [ title, body ].compact.join("\n\n")
-    text.truncate(2000, separator: " ")
-  end
+  # Auto-embedding generation on save
+  after_save :generate_embedding_if_needed
 
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
@@ -57,6 +50,16 @@ class Document < ApplicationRecord
       .active
   }
 
+  def needs_summary?
+    summary.nil? || (summary_generated_at.present? && updated_at > summary_generated_at)
+  end
+
+  def embedding_text
+    # Combine title + body for embedding, truncated to fit context
+    text = [ title, body ].compact.join("\n\n")
+    text.truncate(2000, separator: " ")
+  end
+
   def archive!
     update!(archived_at: Time.current)
   end
@@ -70,19 +73,30 @@ class Document < ApplicationRecord
   end
 
   def body_preview(length = 200)
-    return "" if body.blank?
-    body.truncate(length, separator: " ")
+    body&.truncate(length, separator: " ") || ""
   end
 
   def image_attachments
-    attachments.images
+    attachments.where(content_type: %w[image/png image/jpeg image/gif image/webp])
   end
 
   def file_attachments
-    attachments.where.not(id: attachments.images.select(:id))
+    attachments.where.not(content_type: %w[image/png image/jpeg image/gif image/webp])
   end
 
   def attachments_size_sum
     attachments.sum(:file_size)
+  end
+
+  private
+
+  def generate_embedding_if_needed
+    # Only generate embedding if embedding column exists and content changed
+    return unless self.class.column_names.include?("embedding")
+    return unless saved_change_to_title? || saved_change_to_body?
+    return if embedding.present? && !saved_change_to_body?
+
+    # Enqueue background job for embedding generation
+    DocumentEmbeddingJob.perform_later(self.id) if persisted?
   end
 end
