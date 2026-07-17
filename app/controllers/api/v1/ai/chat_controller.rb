@@ -52,7 +52,8 @@ module Api
 
           message = service.send_message(
             params[:message],
-            document_ids: params[:document_ids] || []
+            document_ids: params[:document_ids] || [],
+            workspace_id: params[:workspace_id]
           )
 
           render json: {
@@ -75,7 +76,8 @@ module Api
 
           service.send_message_stream(
             params[:message],
-            document_ids: params[:document_ids] || []
+            document_ids: params[:document_ids] || [],
+            workspace_id: params[:workspace_id]
           ) do |chunk|
             response.stream.write("data: #{chunk.to_json}\n\n")
           end

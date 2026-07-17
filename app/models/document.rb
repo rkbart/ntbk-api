@@ -16,6 +16,22 @@ class Document < ApplicationRecord
 
   validates :title, presence: true, length: { maximum: 255 }
 
+  # Add after_save callback for auto-embedding generation
+  after_save :generate_embedding_if_needed
+
+  private
+
+  def generate_embedding_if_needed
+    # Only generate embedding if embedding column exists and content changed
+    return unless self.class.column_names.include?('embedding')
+    return unless saved_change_to_title? || saved_change_to_body?
+    return if embedding.present? && !saved_change_to_body?
+    
+    # Enqueue background job for embedding generation
+    DocumentEmbeddingJob.perform_later(self.id) if persisted?
+  end
+
+
   def needs_summary?
     summary.nil? || (summary_generated_at.present? && updated_at > summary_generated_at)
   end
