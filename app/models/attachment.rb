@@ -88,6 +88,6 @@ class Attachment < ApplicationRecord
   end
 
   def enqueue_text_extraction
-    Attachments::Text_extractionJob.perform_later(id)
+    Attachments::TextExtractionJob.perform_later(id)
   end
 end
