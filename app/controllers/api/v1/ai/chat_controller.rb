@@ -13,7 +13,7 @@ module Api
         end
 
         # POST /api/v1/ai/conversations
-        def create_conversation
+        def create
           conversation = current_user.conversations.create!(
             title: params[:title] || "New Conversation"
           )
@@ -22,7 +22,7 @@ module Api
         end
 
         # GET /api/v1/ai/conversations/:id
-        def show_conversation
+        def show
           conversation = current_user.conversations.find(params[:id])
 
           render json: {
@@ -37,7 +37,7 @@ module Api
         end
 
         # DELETE /api/v1/ai/conversations/:id
-        def destroy_conversation
+        def destroy
           conversation = current_user.conversations.find(params[:id])
           conversation.destroy
           head :no_content

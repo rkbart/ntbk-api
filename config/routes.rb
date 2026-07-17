@@ -53,7 +53,7 @@ Rails.application.routes.draw do
         end
 
         # Chat
-        resources :conversations, only: [ :index, :show, :create, :destroy ]
+        resources :conversations, only: [ :index, :show, :create, :destroy ], controller: 'chat'
         post "chat", to: "chat#send_message"
         post "chat/stream", to: "chat#send_message_stream"
 
