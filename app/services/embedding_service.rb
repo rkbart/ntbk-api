@@ -29,15 +29,15 @@ class EmbeddingService
     end
   end
 
-  # Semantic search within a workspace
+  # Semantic search within a specific workspace
   def search(query, workspace:, limit: 10, threshold: 0.5)
     # Check if pgvector is available
     begin
       query_embedding = @client.embed(query)
       return [] if query_embedding.nil?
 
-      Document.joins(:workspace)
-              .where(workspaces: { user_id: workspace.user_id })
+      # Search ONLY within the specified workspace
+      Document.where(workspace_id: workspace.id)
               .active
               .nearest_neighbors(:embedding, query_embedding, distance: "cosine")
               .first(limit)
