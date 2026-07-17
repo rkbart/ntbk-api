@@ -1,6 +1,6 @@
 class ChatService
   SYSTEM_PROMPT = <<~PROMPT
-    You are a helpful AI assistant for a notebook application.#{' '}
+    You are a helpful AI assistant for a notebook application. 
 
     IMPORTANT RULES:
     1. ONLY answer based on the documents provided to you in the context below.
@@ -10,7 +10,7 @@ class ChatService
     5. If a question cannot be answered from the provided documents, say so clearly.
     6. Never fabricate document titles, names, or content that wasn't provided to you.
     7. When citing information, mention which document it came from.
-
+    
     Be concise and helpful. Use markdown formatting when appropriate.
   PROMPT
 
@@ -80,7 +80,7 @@ class ChatService
 
     # Use RAG to find relevant documents
     relevant_docs = find_relevant_documents(content, document_ids, workspace_id)
-
+    
     if relevant_docs.any?
       document_context = format_documents_for_context(relevant_docs)
       messages << { role: "system", content: "Here are the most relevant documents for answering this question. Answer ONLY based on these documents:\n\n#{document_context}" }
@@ -106,13 +106,14 @@ class ChatService
     # If workspace_id is provided, use semantic search
     if workspace_id.present?
       begin
+        workspace = Workspace.find(workspace_id)
         # Try semantic search first
-        results = @embedding_service.search(query, workspace_id: workspace_id, limit: 5, threshold: 0.7)
+        results = @embedding_service.search(query, workspace: workspace, limit: 5, threshold: 0.7)
         return results if results.any?
       rescue => e
         Rails.logger.warn "Semantic search failed, falling back to full-text search: #{e.message}"
       end
-
+      
       # Fall back to full-text search
       return Document.where(workspace_id: workspace_id).active
         .where("title ILIKE :q OR body ILIKE :q", q: "%#{query}%")
