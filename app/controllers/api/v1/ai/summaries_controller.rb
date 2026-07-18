@@ -3,21 +3,21 @@ module Api
     module Ai
       class SummariesController < BaseController
         # GET /api/v1/workspaces/:workspace_id/documents/:document_id/summary
+        # Returns cached summary only - does NOT regenerate
         def show
           document = find_document
-          service = SummaryService.new
-          summary = service.generate_summary(document)
 
           render json: {
             data: {
               document_id: document.id,
-              summary: summary,
+              summary: document.summary,
               generated_at: document.summary_generated_at&.iso8601
             }
           }
         end
 
         # POST /api/v1/workspaces/:workspace_id/documents/:document_id/summary
+        # Regenerates summary (use when document is updated)
         def create
           document = find_document
           service = SummaryService.new
