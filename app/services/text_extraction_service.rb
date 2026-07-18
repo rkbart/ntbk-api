@@ -4,7 +4,6 @@ class TextExtractionService
     @file = attachment.file
   end
 
-  # Extract text content from the attachment
   def extract
     return nil unless @file.attached?
 
@@ -22,62 +21,62 @@ class TextExtractionService
     end
   end
 
-  # Extract tags from document content
-  # Supports formats:
-  # - YAML frontmatter: tags:\n  - tag1\n  - tag2
-  # - Inline: Tags: tag1, tag2, tag3
-  # - Array: tags: [tag1, tag2]
   def extract_tags(content)
     return [] if content.blank?
 
     tags = []
 
-    # Pattern 1: YAML frontmatter tags
-    # tags:\n  - tag1\n  - tag2
-    if content =~ /^tags:\s*\n((?:\s*-\s*.+\n?)+)/mi
-      yaml_tags = $1.scan(/-\s*(.+)/).flatten
-      tags.concat(yaml_tags.map(&:strip).reject(&:blank?))
-    end
+    if content =~ /\A---\s*\n(.+?)\n---/m
+      frontmatter = $1
 
-    # Pattern 2: Inline tags
-    # Tags: tag1, tag2, tag3
-    # tags: tag1, tag2, tag3
-    if content =~ /^(?:tags|Tags):\s*(.+)$/mi
-      inline_tags = $1.split(",").map(&:strip).reject(&:blank?)
-      tags.concat(inline_tags)
-    end
+      # YAML tags block: tags:\n  - tag1\n  - tag2
+      if frontmatter =~ /^tags:\s*\n((?:\s+-\s+.+\n?)+)/m
+        yaml_block = $1
+        yaml_tags = yaml_block.scan(/^\s*-\s+(.+)/).flatten
+        tags.concat(yaml_tags.map(&:strip).reject(&:blank?))
+      end
 
-    # Pattern 3: Array tags
-    # tags: [tag1, tag2]
-    if content =~ /^tags:\s*\[(.+)\]/mi
-      array_tags = $1.split(",").map(&:strip).reject(&:blank?)
-      tags.concat(array_tags)
+      # Inline tags: tags: tag1, tag2
+      if frontmatter =~ /^tags:\s*(.+)$/i
+        inline_tags = $1.split(",").map(&:strip).reject(&:blank?)
+        tags.concat(inline_tags)
+      end
+    else
+      # No frontmatter, check for inline tags in content
+      if content =~ /^(?:tags|Tags):\s*(.+)$/mi
+        inline_tags = $1.split(",").map(&:strip).reject(&:blank?)
+        tags.concat(inline_tags)
+      end
     end
 
     tags.uniq.map(&:downcase)
   end
 
-  # Remove tags section from content
   def remove_tags_from_content(content)
     return content if content.blank?
 
     cleaned = content.dup
 
-    # Remove YAML frontmatter tags block
-    # tags:\n  - tag1\n  - tag2
-    cleaned.gsub!(/^tags:\s*\n(?:\s*-\s*.+\n?)+/mi, "")
+    if cleaned =~ /\A---\s*\n(.+?)\n---/m
+      frontmatter = $1
+      body = $'
 
-    # Remove inline tags
-    # Tags: tag1, tag2, tag3
-    cleaned.gsub!(/^(?:tags|Tags):\s*.+$/mi, "")
+      # Remove tags from frontmatter
+      cleaned_frontmatter = frontmatter.dup
+      cleaned_frontmatter.gsub!(/^tags:\s*\n(?:\s*-\s*.+\n?)+/mi, "")
+      cleaned_frontmatter.gsub!(/^tags:\s*.+$/mi, "")
+      cleaned_frontmatter = cleaned_frontmatter.strip
 
-    # Remove array tags
-    # tags: [tag1, tag2]
-    cleaned.gsub!(/^tags:\s*\[.+\]/mi, "")
+      if cleaned_frontmatter.blank?
+        cleaned = body.strip
+      else
+        cleaned = "---\n#{cleaned_frontmatter}\n---\n\n#{body.strip}"
+      end
+    else
+      cleaned.gsub!(/^(?:tags|Tags):\s*.+$/mi, "")
+    end
 
-    # Clean up multiple blank lines
     cleaned.gsub!(/\n{3,}/, "\n\n")
-
     cleaned.strip
   end
 
@@ -92,15 +91,11 @@ class TextExtractionService
 
   def extract_from_pdf
     require "pdf/reader"
-
     text_parts = []
     @file.download do |pdf_content|
       reader = PDF::Reader.new(StringIO.new(pdf_content))
-      reader.pages.each do |page|
-        text_parts << page.text
-      end
+      reader.pages.each { |page| text_parts << page.text }
     end
-
     text_parts.join("\n\n").strip
   rescue => e
     Rails.logger.error "Failed to extract PDF text: #{e.message}"
@@ -109,21 +104,14 @@ class TextExtractionService
 
   def extract_from_docx
     require "docx"
-
     temp_file = Tempfile.new(["docx", ".docx"])
     temp_file.binmode
-
-    @file.download do |content|
-      temp_file.write(content)
-    end
+    @file.download { |content| temp_file.write(content) }
     temp_file.rewind
-
     doc = Docx::Document.open(temp_file.path)
     text = doc.paragraphs.map(&:to_s).join("\n")
-
     temp_file.close
     temp_file.unlink
-
     text.strip
   rescue => e
     Rails.logger.error "Failed to extract DOCX text: #{e.message}"
