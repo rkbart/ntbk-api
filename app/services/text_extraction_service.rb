@@ -22,6 +22,65 @@ class TextExtractionService
     end
   end
 
+  # Extract tags from document content
+  # Supports formats:
+  # - YAML frontmatter: tags:\n  - tag1\n  - tag2
+  # - Inline: Tags: tag1, tag2, tag3
+  # - Array: tags: [tag1, tag2]
+  def extract_tags(content)
+    return [] if content.blank?
+
+    tags = []
+
+    # Pattern 1: YAML frontmatter tags
+    # tags:\n  - tag1\n  - tag2
+    if content =~ /^tags:\s*\n((?:\s*-\s*.+\n?)+)/mi
+      yaml_tags = $1.scan(/-\s*(.+)/).flatten
+      tags.concat(yaml_tags.map(&:strip).reject(&:blank?))
+    end
+
+    # Pattern 2: Inline tags
+    # Tags: tag1, tag2, tag3
+    # tags: tag1, tag2, tag3
+    if content =~ /^(?:tags|Tags):\s*(.+)$/mi
+      inline_tags = $1.split(",").map(&:strip).reject(&:blank?)
+      tags.concat(inline_tags)
+    end
+
+    # Pattern 3: Array tags
+    # tags: [tag1, tag2]
+    if content =~ /^tags:\s*\[(.+)\]/mi
+      array_tags = $1.split(",").map(&:strip).reject(&:blank?)
+      tags.concat(array_tags)
+    end
+
+    tags.uniq.map(&:downcase)
+  end
+
+  # Remove tags section from content
+  def remove_tags_from_content(content)
+    return content if content.blank?
+
+    cleaned = content.dup
+
+    # Remove YAML frontmatter tags block
+    # tags:\n  - tag1\n  - tag2
+    cleaned.gsub!(/^tags:\s*\n(?:\s*-\s*.+\n?)+/mi, "")
+
+    # Remove inline tags
+    # Tags: tag1, tag2, tag3
+    cleaned.gsub!(/^(?:tags|Tags):\s*.+$/mi, "")
+
+    # Remove array tags
+    # tags: [tag1, tag2]
+    cleaned.gsub!(/^tags:\s*\[.+\]/mi, "")
+
+    # Clean up multiple blank lines
+    cleaned.gsub!(/\n{3,}/, "\n\n")
+
+    cleaned.strip
+  end
+
   private
 
   def extract_from_text
@@ -51,7 +110,7 @@ class TextExtractionService
   def extract_from_docx
     require "docx"
 
-    temp_file = Tempfile.new([ "docx", ".docx" ])
+    temp_file = Tempfile.new(["docx", ".docx"])
     temp_file.binmode
 
     @file.download do |content|
