@@ -30,7 +30,6 @@ class ChatService
     messages = build_messages(content, document_ids, workspace_id)
     response_content = @client.chat(messages, temperature: 0.7, max_tokens: 4096)
 
-    # Handle empty response
     if response_content.blank?
       response_content = "I'm sorry, I couldn't generate a response. Please try again."
     end
@@ -59,7 +58,6 @@ class ChatService
       yield chunk if block_given?
     end
 
-    # Handle empty response
     if full_response.blank?
       full_response = "I'm sorry, I couldn't generate a response. Please try again."
     end
@@ -87,13 +85,8 @@ class ChatService
       messages << { role: "system", content: "No relevant documents were found for this question. You cannot answer questions about specific documents without being provided with them. Tell the user that no relevant documents were found." }
     end
 
-    # Add conversation history (last 5 messages to prevent context overflow)
-    history = @conversation.messages.chronological.last(5)
-    history.each do |msg|
-      # Truncate long messages in history
-      truncated_content = msg.content&.truncate(1000) || ""
-      messages << { role: msg.role, content: truncated_content }
-    end
+    # Add user's question
+    messages << { role: "user", content: content }
 
     messages
   end
