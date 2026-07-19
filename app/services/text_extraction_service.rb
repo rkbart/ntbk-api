@@ -4,11 +4,16 @@ class TextExtractionService
     @file = attachment.file
   end
 
+  # Extract text content from the attachment
+  # For markdown files, return content as-is to preserve formatting
   def extract
     return nil unless @file.attached?
 
     case @attachment.content_type
-    when "text/plain", "text/markdown", "text/csv", "text/html", "text/css", "text/javascript"
+    when "text/markdown"
+      # Return markdown content as-is to preserve formatting
+      extract_markdown_as_is
+    when "text/plain", "text/csv", "text/html", "text/css", "text/javascript"
       extract_from_text
     when "application/pdf"
       extract_from_pdf
@@ -21,11 +26,13 @@ class TextExtractionService
     end
   end
 
+  # Extract tags from document content
   def extract_tags(content)
     return [] if content.blank?
 
     tags = []
 
+    # Check for YAML frontmatter (between --- delimiters)
     if content =~ /\A---\s*\n(.+?)\n---/m
       frontmatter = $1
 
@@ -33,18 +40,18 @@ class TextExtractionService
       if frontmatter =~ /^tags:\s*\n((?:\s+-\s+.+\n?)+)/m
         yaml_block = $1
         yaml_tags = yaml_block.scan(/^\s*-\s+(.+)/).flatten
-        tags.concat(yaml_tags.map(&:strip).reject(&:blank?))
+        tags.concat(yaml_tags.map { |t| clean_tag(t) }.reject(&:blank?))
       end
 
       # Inline tags: tags: tag1, tag2
       if frontmatter =~ /^tags:\s*(.+)$/i
-        inline_tags = $1.split(",").map(&:strip).reject(&:blank?)
+        inline_tags = $1.split(",").map { |t| clean_tag(t) }.reject(&:blank?)
         tags.concat(inline_tags)
       end
     else
       # No frontmatter, check for inline tags in content
       if content =~ /^(?:tags|Tags):\s*(.+)$/mi
-        inline_tags = $1.split(",").map(&:strip).reject(&:blank?)
+        inline_tags = $1.split(",").map { |t| clean_tag(t) }.reject(&:blank?)
         tags.concat(inline_tags)
       end
     end
@@ -52,6 +59,8 @@ class TextExtractionService
     tags.uniq.map(&:downcase)
   end
 
+  # Remove tags section from content
+  # For markdown files, preserve the rest of the content
   def remove_tags_from_content(content)
     return content if content.blank?
 
@@ -81,6 +90,18 @@ class TextExtractionService
   end
 
   private
+
+  def clean_tag(tag)
+    tag.to_s.gsub(/["'"'"'\-]/, "").strip
+  end
+
+  # For markdown files, read content as-is to preserve formatting
+  def extract_markdown_as_is
+    @file.download
+  rescue => e
+    Rails.logger.error "Failed to read markdown file: #{e.message}"
+    nil
+  end
 
   def extract_from_text
     @file.download
