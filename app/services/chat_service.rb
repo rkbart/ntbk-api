@@ -1,6 +1,6 @@
 class ChatService
   SYSTEM_PROMPT = <<~PROMPT
-    You are a helpful AI assistant for a notebook application.#{' '}
+    You are a helpful AI assistant for a notebook application.
 
     IMPORTANT RULES:
     1. ONLY answer based on the documents provided to you in the context below.
@@ -20,34 +20,30 @@ class ChatService
     @embedding_service = EmbeddingService.new
   end
 
-  # Send a message and get response
   def send_message(content, document_ids: [], workspace_id: nil)
-    # Save user message
     user_message = @conversation.messages.create!(
       role: "user",
       content: content,
       document_references: document_ids
     )
 
-    # Build context with RAG
     messages = build_messages(content, document_ids, workspace_id)
-
-    # Get AI response
     response_content = @client.chat(messages, temperature: 0.7, max_tokens: 4096)
 
-    # Save assistant message
+    # Handle empty response
+    if response_content.blank?
+      response_content = "I'm sorry, I couldn't generate a response. Please try again."
+    end
+
     assistant_message = @conversation.messages.create!(
       role: "assistant",
       content: response_content
     )
 
-    # Update conversation timestamp
     @conversation.update!(last_message_at: Time.current)
-
     assistant_message
   end
 
-  # Send message with streaming
   def send_message_stream(content, document_ids: [], workspace_id: nil, &block)
     user_message = @conversation.messages.create!(
       role: "user",
@@ -63,22 +59,25 @@ class ChatService
       yield chunk if block_given?
     end
 
+    # Handle empty response
+    if full_response.blank?
+      full_response = "I'm sorry, I couldn't generate a response. Please try again."
+    end
+
     assistant_message = @conversation.messages.create!(
       role: "assistant",
       content: full_response
     )
 
     @conversation.update!(last_message_at: Time.current)
-
     assistant_message
   end
 
   private
 
   def build_messages(content, document_ids, workspace_id)
-    messages = [ { role: "system", content: SYSTEM_PROMPT } ]
+    messages = [{ role: "system", content: SYSTEM_PROMPT }]
 
-    # Use RAG to find relevant documents
     relevant_docs = find_relevant_documents(content, document_ids, workspace_id)
 
     if relevant_docs.any?
@@ -88,40 +87,37 @@ class ChatService
       messages << { role: "system", content: "No relevant documents were found for this question. You cannot answer questions about specific documents without being provided with them. Tell the user that no relevant documents were found." }
     end
 
-    # Add conversation history (last 10 messages)
-    history = @conversation.messages.chronological.last(10)
+    # Add conversation history (last 5 messages to prevent context overflow)
+    history = @conversation.messages.chronological.last(5)
     history.each do |msg|
-      messages << { role: msg.role, content: msg.content }
+      # Truncate long messages in history
+      truncated_content = msg.content&.truncate(1000) || ""
+      messages << { role: msg.role, content: truncated_content }
     end
 
     messages
   end
 
   def find_relevant_documents(query, document_ids, workspace_id)
-    # If specific document IDs are provided, use those
     if document_ids.present?
       return Document.where(id: document_ids).active.to_a
     end
 
-    # If workspace_id is provided, use semantic search
     if workspace_id.present?
       begin
         workspace = Workspace.find(workspace_id)
-        # Try semantic search first
-        results = @embedding_service.search(query, workspace: workspace, limit: 5, threshold: 0.7)
+        results = @embedding_service.search(query, workspace: workspace, limit: 3, threshold: 0.7)
         return results if results.any?
       rescue => e
-        Rails.logger.warn "Semantic search failed, falling back to full-text search: #{e.message}"
+        Rails.logger.warn "Semantic search failed: #{e.message}"
       end
 
-      # Fall back to full-text search
       return Document.where(workspace_id: workspace_id).active
         .where("title ILIKE :q OR body ILIKE :q", q: "%#{query}%")
-        .limit(5)
+        .limit(3)
         .to_a
     end
 
-    # No context provided
     []
   end
 
@@ -131,7 +127,7 @@ class ChatService
         Document: #{doc.title}
         ID: #{doc.id}
         ---
-        #{doc.body&.truncate(3000) || "(No content)"}
+        #{doc.body&.truncate(2000) || "(No content)"}
         ---
       DOC
     end.join("\n\n")
