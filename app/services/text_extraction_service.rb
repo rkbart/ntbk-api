@@ -125,7 +125,7 @@ class TextExtractionService
 
   def extract_from_docx
     require "docx"
-    temp_file = Tempfile.new(["docx", ".docx"])
+    temp_file = Tempfile.new([ "docx", ".docx" ])
     temp_file.binmode
     @file.download { |content| temp_file.write(content) }
     temp_file.rewind

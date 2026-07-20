@@ -74,7 +74,7 @@ class ChatService
   private
 
   def build_messages(content, document_ids, workspace_id)
-    messages = [{ role: "system", content: SYSTEM_PROMPT }]
+    messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 
     relevant_docs = find_relevant_documents(content, document_ids, workspace_id)
 
