@@ -4,7 +4,11 @@ module Api
       class ChatController < BaseController
         # GET /api/v1/ai/conversations
         def index
-          conversations = current_user.conversations.recent.page(params[:page]).per(params[:per_page] || 20)
+          conversations = current_user.conversations
+            .where(workspace_id: params[:workspace_id])
+            .recent
+            .page(params[:page])
+            .per(params[:per_page] || 20)
 
           render json: {
             data: conversations.map { |c| ConversationSerializer.new(c).as_json },
@@ -15,7 +19,8 @@ module Api
         # POST /api/v1/ai/conversations
         def create
           conversation = current_user.conversations.create!(
-            title: params[:title] || "New Conversation"
+            title: params[:title] || "New Conversation",
+            workspace_id: params[:workspace_id]
           )
 
           render json: { data: ConversationSerializer.new(conversation).as_json }, status: :created
@@ -96,7 +101,8 @@ module Api
             current_user.conversations.find(params[:conversation_id])
           else
             current_user.conversations.create!(
-              title: params[:message]&.truncate(50) || "New Conversation"
+              title: params[:message]&.truncate(50) || "New Conversation",
+              workspace_id: params[:workspace_id]
             )
           end
         rescue ActiveRecord::RecordNotFound
