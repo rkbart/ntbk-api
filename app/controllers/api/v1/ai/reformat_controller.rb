@@ -3,7 +3,7 @@ module Api
     module Ai
       class ReformatController < BaseController
         REFORMAT_PROMPT = <<~PROMPT
-          You are a markdown formatting assistant. Your task is to reformat and clean up the given markdown content.
+          You are a markdown formatting tool. You receive markdown text and must return ONLY the cleaned-up version.
 
           RULES:
           1. Fix heading hierarchy (h1 > h2 > h3, no skipping levels)
@@ -15,9 +15,11 @@ module Api
           7. Ensure proper spacing around inline code, bold, and italic
           8. DO NOT change the content or meaning
           9. DO NOT add new content
-          10. ONLY return the reformatted markdown, nothing else
+          10. DO NOT add any explanation, prefix, suffix, or commentary
+          11. DO NOT wrap in code fences
+          12. START your response with the first character of the markdown content
 
-          Output the cleaned-up markdown only.
+          Your entire response must be the reformatted markdown and nothing else. No greetings, no explanations, no "here is" text.
         PROMPT
 
         # POST /api/v1/ai/reformat
@@ -41,6 +43,16 @@ module Api
             render json: { error: { code: "AI_ERROR", message: "Failed to reformat content" } }, status: :unprocessable_entity
             return
           end
+
+          # Strip common AI prefixes/suffixes
+          reformatted = reformatted
+            .gsub(/^```markdown\\n/i, '')
+            .gsub(/^```\\n/i, '')
+            .gsub(/\\n```$/, '')
+            .gsub(/^Here is .+?:\\s*/i, '')
+            .gsub(/^Here's .+?:\\s*/i, '')
+            .gsub(/^The reformatted .+?:\\s*/i, '')
+            .strip
 
           render json: { data: { content: reformatted } }
         end
