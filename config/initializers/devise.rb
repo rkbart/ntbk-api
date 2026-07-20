@@ -282,9 +282,10 @@ Devise.setup do |config|
                     info_fields: "email,name,picture"
   end
 
-  # ==> API mode configuration
-  # Skip session storage for API mode
-  config.skip_session_storage = [ :cookies ]
+  # Allow GET for OmniAuth authorize route (required for SPA redirect flow).
+  # The OAuth2 state parameter provides CSRF protection at the protocol level.
+  OmniAuth.config.allowed_request_methods = [ :get, :post ]
+  OmniAuth.config.silence_get_warning = true
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or

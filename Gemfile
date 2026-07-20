@@ -36,7 +36,6 @@ gem "devise", "~> 5.0"
 # OmniAuth for social logins (Google, GitHub, etc.)
 gem "devise_invitable", "~> 2.0"
 gem "omniauth-google-oauth2"
-gem "omniauth-rails_csrf_protection"
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 
