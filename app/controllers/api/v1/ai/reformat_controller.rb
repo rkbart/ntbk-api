@@ -3,23 +3,18 @@ module Api
     module Ai
       class ReformatController < BaseController
         REFORMAT_PROMPT = <<~PROMPT
-          You are a markdown formatting tool. You receive markdown text and must return ONLY the cleaned-up version.
+          Output ONLY raw markdown. No explanations, no preamble, no commentary, no code fences around the output.
 
-          RULES:
-          1. Fix heading hierarchy (h1 > h2 > h3, no skipping levels)
-          2. Ensure consistent spacing between sections (one blank line between headings and content)
-          3. Fix list formatting (proper indentation, consistent markers)
-          4. Clean up code blocks (ensure proper fencing)
-          5. Fix table formatting if present
-          6. Remove excessive blank lines (max 2 consecutive)
-          7. Ensure proper spacing around inline code, bold, and italic
-          8. DO NOT change the content or meaning
-          9. DO NOT add new content
-          10. DO NOT add any explanation, prefix, suffix, or commentary
-          11. DO NOT wrap in code fences
-          12. START your response with the first character of the markdown content
+          Task: Reformat the given markdown to fix:
+          - Heading hierarchy (h1 > h2 > h3, no skipping levels)
+          - Consistent spacing (one blank line between sections)
+          - List formatting (proper indentation)
+          - Code block fencing
+          - Excessive blank lines (max 2 consecutive)
+          - Spacing around inline code, bold, italic
 
-          Your entire response must be the reformatted markdown and nothing else. No greetings, no explanations, no "here is" text.
+          DO NOT change content or meaning. DO NOT add new content.
+          Your response MUST start with the first character of the markdown. Nothing before it.
         PROMPT
 
         # POST /api/v1/ai/reformat
@@ -44,14 +39,19 @@ module Api
             return
           end
 
-          # Strip common AI prefixes/suffixes
+          # Aggressively strip AI preamble/suffix
           reformatted = reformatted
-            .gsub(/^```markdown\\n/i, '')
-            .gsub(/^```\\n/i, '')
-            .gsub(/\\n```$/, '')
-            .gsub(/^Here is .+?:\\s*/i, '')
-            .gsub(/^Here's .+?:\\s*/i, '')
-            .gsub(/^The reformatted .+?:\\s*/i, '')
+            .gsub(/```markdown\s*/i, '')
+            .gsub(/```\s*\z/, '')
+            .gsub(/\A\s*```[^\n]*\n/, '')
+            .gsub(/\A[^\n]*?Here is[^\n]*:\s*\n*/i, '')
+            .gsub(/\A[^\n]*?Here's[^\n]*:\s*\n*/i, '')
+            .gsub(/\A[^\n]*?rewritten[^\n]*:\s*\n*/i, '')
+            .gsub(/\A[^\n]*?reformatted[^\n]*:\s*\n*/i, '')
+            .gsub(/\A[^\n]*?cleaned[^\n]*:\s*\n*/i, '')
+            .gsub(/\A[^\n]*?below is[^\n]*:\s*\n*/i, '')
+            .gsub(/\A[^\n]*?following is[^\n]*:\s*\n*/i, '')
+            .gsub(/\A[^\n]*?easier to read[^\n]*:\s*\n*/i, '')
             .strip
 
           render json: { data: { content: reformatted } }
