@@ -58,6 +58,9 @@ Rails.application.routes.draw do
         post "chat", to: "chat#send_message"
         post "chat/stream", to: "chat#send_message_stream"
 
+        # AI Reformat
+        post "reformat", to: "reformat#create"
+
         # Summaries
         resources :summaries, only: [ :create ] do
           collection do
