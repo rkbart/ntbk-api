@@ -51,11 +51,14 @@ rails g devise User
 ```ruby
 class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable
+         :recoverable, :rememberable, :validatable,
+         :omniauthable, omniauth_providers: [:google_oauth2]
 
   # Associations
-  has_one :workspace, dependent: :destroy
+  has_many :workspaces, dependent: :destroy
   has_many :tags, dependent: :destroy
+  has_many :conversations, dependent: :destroy
+  has_many :oauth_identities, dependent: :destroy
 
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :password, length: { minimum: 6 }, if: :password_required?
@@ -63,19 +66,7 @@ class User < ApplicationRecord
   before_save :downcase_email
   after_create :create_default_workspace
 
-  private
-
-  def downcase_email
-    self.email = email.downcase if email.present?
-  end
-
-  def password_required?
-    new_record? || password.present?
-  end
-
-  def create_default_workspace
-    create_workspace(name: "My Workspace")
-  end
+  # ... (see full model in app/models/user.rb)
 end
 ```
 
@@ -86,6 +77,111 @@ end
 - `reset_password_token` (indexed)
 - `reset_password_sent_at`
 - `remember_created_at`
+
+---
+
+## Google OAuth Setup
+
+### Installation
+```bash
+# Add to Gemfile
+echo 'gem "omniauth-google-oauth2"' >> Gemfile
+bundle install
+```
+
+### Google Cloud Console Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Go to **APIs & Services > Credentials**
+4. Click **Create Credentials > OAuth client ID**
+5. Set **Application type** to **Web application**
+6. Add **Authorized redirect URIs**:
+   - `http://localhost:3000/users/auth/google_oauth2/callback`
+7. Copy the **Client ID** and **Client Secret**
+
+### Environment Variables
+Add to `.env`:
+```bash
+GOOGLE_CLIENT_ID=your_client_id_here
+GOOGLE_CLIENT_SECRET=your_client_secret_here
+FRONTEND_URL=http://localhost:5173
+```
+
+### Devise Configuration
+**File**: `config/initializers/devise.rb`
+```ruby
+if ENV["GOOGLE_CLIENT_ID"].present? && ENV["GOOGLE_CLIENT_SECRET"].present?
+  config.omniauth :google_oauth2,
+                  ENV.fetch("GOOGLE_CLIENT_ID"),
+                  ENV.fetch("GOOGLE_CLIENT_SECRET"),
+                  scope: "email,profile",
+                  info_fields: "email,name,picture"
+end
+
+# Allow GET for OmniAuth authorize route (required for SPA redirect flow)
+OmniAuth.config.allowed_request_methods = [:get, :post]
+OmniAuth.config.silence_get_warning = true
+```
+
+### Controller
+**File**: `app/controllers/users/omniauth_callbacks_controller.rb`
+```ruby
+class Users::OmniauthCallbacksController < Devise::OmniauthCallbacksController
+  skip_before_action :verify_authenticity_token, raise: false
+
+  def google_oauth2
+    @user = User.from_omniauth(request.env["omniauth.auth"])
+
+    if @user.persisted?
+      token = JwtService.encode(user_id: @user.id)
+      redirect_to "#{ENV.fetch('FRONTEND_URL', 'http://localhost:5173')}/auth/callback?token=#{token}&user_id=#{@user.id}"
+    else
+      redirect_to "#{ENV.fetch('FRONTEND_URL', 'http://localhost:5173')}/auth/error?message=Could+not+authenticate+you+from+Google+account"
+    end
+  end
+
+  def failure
+    redirect_to "#{ENV.fetch('FRONTEND_URL', 'http://localhost:5173')}/auth/error?message=Authentication+failed"
+  end
+end
+```
+
+### Model
+**File**: `app/models/user.rb`
+```ruby
+def self.from_omniauth(auth)
+  identity = OauthIdentity.find_or_initialize_by(
+    provider: auth.provider,
+    uid: auth.uid
+  )
+
+  if identity.user.present?
+    identity.user
+  else
+    user = User.find_by(email: auth.info.email)
+    if user
+      identity.user = user
+      identity.save!
+      user
+    else
+      user = User.create!(
+        email: auth.info.email,
+        password: Devise.friendly_token[0, 20]
+      )
+      identity.user = user
+      identity.save!
+      user
+    end
+  end
+end
+```
+
+### OAuth Flow
+1. Frontend redirects to `GET /users/auth/google_oauth2`
+2. Devise redirects to Google's OAuth consent screen
+3. After authorization, Google redirects to callback URL
+4. Callback creates/finds user and redirects to frontend with JWT token
+5. Frontend stores token and authenticates via JWT
 
 ---
 

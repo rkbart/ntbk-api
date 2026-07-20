@@ -58,6 +58,7 @@ bin/rails server
 - `POST /api/v1/auth/register` - Register
 - `POST /api/v1/auth/login` - Login
 - `GET /api/v1/auth/me` - Get profile
+- `GET /users/auth/google_oauth2` - Google OAuth sign-in
 
 ### Workspaces
 - `GET /api/v1/workspaces` - List workspaces
