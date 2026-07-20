@@ -1,5 +1,6 @@
 class Conversation < ApplicationRecord
   belongs_to :user
+  belongs_to :workspace, optional: true
   has_many :messages, dependent: :destroy
 
   validates :title, length: { maximum: 255 }

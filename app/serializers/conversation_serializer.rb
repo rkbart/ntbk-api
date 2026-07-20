@@ -1,5 +1,5 @@
 class ConversationSerializer < ActiveModel::Serializer
-  attributes :id, :title, :last_message_at, :message_count, :created_at
+  attributes :id, :title, :workspace_id, :last_message_at, :message_count, :created_at
 
   def last_message_at
     object.last_message_at&.iso8601
