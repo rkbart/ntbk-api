@@ -77,4 +77,4 @@ group :development, :test do
 end
 gem "pdf-reader", "~> 2.11"
 gem "docx", "~> 0.8"
-gem "dotenv-rails", groups: [:development, :test]
+gem "dotenv-rails", groups: [ :development, :test ]

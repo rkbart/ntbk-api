@@ -19,7 +19,7 @@ Rails.application.routes.draw do
       resources :tags, only: [ :index, :create, :destroy ]
 
       # Nested resources under workspace
-      resources :workspaces, only: [ :index, :show, :create, :update ] do
+      resources :workspaces, only: [ :index, :show, :create, :update, :destroy ] do
         post "summary", to: "ai/workspace_summary#create"
         resources :folders, only: [ :index, :show, :create, :update, :destroy ]
         resources :documents, only: [ :index, :show, :create, :update, :destroy ] do

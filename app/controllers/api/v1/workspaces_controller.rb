@@ -1,7 +1,7 @@
 module Api
   module V1
     class WorkspacesController < BaseController
-      before_action :set_workspace, only: [ :show, :update ]
+      before_action :set_workspace, only: [ :show, :update, :destroy ]
 
       # GET /api/v1/workspaces
       def index
@@ -32,6 +32,12 @@ module Api
         else
           render json: { error: { code: "VALIDATION_ERROR", message: "Validation failed", details: @workspace.errors.full_messages } }, status: :unprocessable_entity
         end
+      end
+
+      # DELETE /api/v1/workspaces/:id
+      def destroy
+        @workspace.destroy!
+        head :no_content
       end
 
       private
