@@ -1224,3 +1224,64 @@ end
 - [x] Implement full-text search
 - [ ] Add API versioning
 - [ ] Deploy to production
+
+---
+
+# User Settings Implementation (Milestone 6)
+
+## Overview
+
+Added user settings page with profile management, password change, and OAuth user handling.
+
+## Database Migrations
+
+### Add name to users
+```ruby
+class AddNameToUsers < ActiveRecord::Migration[8.1]
+  def change
+    add_column :users, :name, :string
+  end
+end
+```
+
+### Add password_set_by_user to users
+```ruby
+class AddPasswordSetByUserToUsers < ActiveRecord::Migration[8.1]
+  def change
+    add_column :users, :password_set_by_user, :boolean, default: false, null: false
+  end
+end
+```
+
+## Backend Changes
+
+### User Model
+- Added `has_password?` method that checks `password_set_by_user?`
+- Updated `from_omniauth` to save Google profile name
+
+### SettingsController
+- `GET /api/v1/settings/profile` — Returns user profile with `has_password` and `oauth_providers`
+- `PATCH /api/v1/settings/profile` — Updates name and email
+- `PATCH /api/v1/settings/password` — Changes/sets password
+  - Email/password users: requires current password
+  - OAuth users: no current password required
+
+### Routes
+```ruby
+get "settings/profile", to: "settings#profile"
+patch "settings/profile", to: "settings#update_profile"
+patch "settings/password", to: "settings#update_password"
+```
+
+### UserSerializer
+- Added `name` attribute to serialized user data
+
+## Key Design Decisions
+
+1. **OAuth password handling**: Use `password_set_by_user` flag to distinguish OAuth vs email/password users
+2. **Email disabled in settings**: Email is tied to account, cannot be changed
+3. **Name display**: Dashboard shows name instead of email in "Signed in as"
+
+## Testing
+- 131+ tests passing
+- Added settings controller tests for profile and password updates
