@@ -4,13 +4,11 @@ class LlmClientFactory
 
     case provider.downcase
     when "ollama"
-      OllamaClient.new
+        OllamaClient.new
     when "openai"
-      OpenaiClient.new
+        OpenaiClient.new
     when "anthropic"
-      AnthropicClient.new
-    else
-      raise ArgumentError, "Unknown LLM provider: #{provider}"
+        AnthropicClient.new
     end
   end
 end

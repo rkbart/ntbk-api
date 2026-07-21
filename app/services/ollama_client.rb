@@ -24,8 +24,9 @@ class OllamaClient
 
   # Generate chat completion (non-streaming)
   def chat(messages, options = {})
+    model = options.delete(:model) || CHAT_MODEL
     response = post("/api/chat", {
-      model: CHAT_MODEL,
+      model: model,
       messages: messages,
       stream: false,
       options: options
@@ -75,7 +76,7 @@ class OllamaClient
   def post(path, body)
     uri = URI("#{@base_url}#{path}")
     http = Net::HTTP.new(uri.host, uri.port)
-    http.read_timeout = 300  # 5 minutes timeout for chat responses
+    http.read_timeout = 600  # 10 minutes timeout for chat responses
     request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
     request.body = body.to_json
 
