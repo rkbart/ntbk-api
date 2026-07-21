@@ -13,6 +13,7 @@ class User < ApplicationRecord
 
   # Validations
   validates :email, presence: true, uniqueness: { case_sensitive: false }
+  validates :name, length: { maximum: 50 }, allow_blank: true
   validates :password, length: { minimum: 6 }, if: :password_required?
 
   # Callbacks
@@ -42,6 +43,7 @@ class User < ApplicationRecord
         # Create new user and identity
         user = User.create!(
           email: auth.info.email,
+          name: auth.info.name,
           password: Devise.friendly_token[0, 20]
         )
         identity.user = user
@@ -67,6 +69,12 @@ class User < ApplicationRecord
   # Get OAuth identity for a provider
   def oauth_identity(provider)
     oauth_identities.find_by(provider: provider.to_s)
+  end
+
+  # Check if user has a password set (OAuth users may not have one)
+  def has_password?
+    # Checks if user explicitly set a password (not auto-generated for OAuth)
+    password_set_by_user?
   end
 
   private

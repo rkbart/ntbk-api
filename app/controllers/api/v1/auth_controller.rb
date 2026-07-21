@@ -5,7 +5,7 @@ module Api
 
       # POST /api/v1/auth/register
       def register
-        user = User.new(register_params)
+        user = User.new(register_params.merge(password_set_by_user: true))
 
         if user.save
           token = JwtService.encode(user_id: user.id)

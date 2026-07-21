@@ -15,6 +15,11 @@ Rails.application.routes.draw do
       # Search
       get "search", to: "search#index"
 
+      # User Settings
+      get "settings/profile", to: "settings#profile"
+      patch "settings/profile", to: "settings#update_profile"
+      patch "settings/password", to: "settings#update_password"
+
       # Tags (global, not nested under workspace)
       resources :tags, only: [ :index, :create, :destroy ]
 
@@ -58,8 +63,6 @@ Rails.application.routes.draw do
         post "chat", to: "chat#send_message"
         post "chat/stream", to: "chat#send_message_stream"
 
-        # AI Reformat
-        post "reformat", to: "reformat#create"
 
         # Summaries
         resources :summaries, only: [ :create ] do
