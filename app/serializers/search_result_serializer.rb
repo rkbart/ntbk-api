@@ -1,5 +1,5 @@
 class SearchResultSerializer < ActiveModel::Serializer
-  attributes :id, :title, :body_preview, :folder_id,
+  attributes :id, :title, :body_preview, :workspace_id, :folder_id,
              :archived_at, :created_at, :updated_at
 
   has_one :folder

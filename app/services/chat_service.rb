@@ -97,18 +97,30 @@ class ChatService
     end
 
     if workspace_id.present?
+      # Try semantic search first (embeddings)
       begin
         workspace = Workspace.find(workspace_id)
-        results = @embedding_service.search(query, workspace: workspace, limit: 3, threshold: 0.7)
+        results = @embedding_service.search(query, workspace: workspace, limit: 10, threshold: 0.5)
         return results if results.any?
       rescue => e
         Rails.logger.warn "Semantic search failed: #{e.message}"
       end
 
-      return Document.where(workspace_id: workspace_id).active
-        .where("title ILIKE :q OR body ILIKE :q", q: "%#{query}%")
-        .limit(3)
+      # Fallback: full-text search on title, body, and extracted attachment text
+      documents = Document.where(workspace_id: workspace_id).active
+        .left_joins(:attachments)
+        .where(
+          "documents.title ILIKE :q OR documents.body ILIKE :q OR attachments.metadata::text ILIKE :q",
+          q: "%#{query}%"
+        )
+        .distinct
+        .limit(10)
         .to_a
+
+      return documents if documents.any?
+
+      # Last resort: return all active documents in the workspace (max 10)
+      return Document.where(workspace_id: workspace_id).active.limit(10).to_a
     end
 
     []
