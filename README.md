@@ -119,6 +119,8 @@ DELETE /api/v1/tags/:id          - Delete tag
 GET    /api/v1/search?q=query    - Search documents
 ```
 
+**Response includes**: `workspace_id` for correct navigation from search results.
+
 ### AI Features
 ```
 POST   /api/v1/ai/embeddings           - Generate embeddings

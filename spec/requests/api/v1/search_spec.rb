@@ -27,6 +27,11 @@ RSpec.describe 'Api::V1::Search', type: :request do
         expect(data.first['title']).to eq('Ruby on Rails Guide')
       end
 
+      it 'includes workspace_id in results' do
+        data = json_response_data
+        expect(data.first['workspace_id']).to eq(workspace.id)
+      end
+
       it 'includes search_time_ms in meta' do
         expect(json_response_meta['search_time_ms']).to be_a(Numeric)
       end

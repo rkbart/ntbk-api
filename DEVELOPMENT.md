@@ -1177,6 +1177,7 @@ end
       "id": 1,
       "title": "Getting Started with Rails",
       "body_preview": "# Getting Started...",
+      "workspace_id": 1,
       "folder_id": 3,
       "archived_at": null,
       "created_at": "2026-07-15T10:30:00Z",
