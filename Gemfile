@@ -43,7 +43,7 @@ gem "rack-cors"
 gem "active_model_serializers", "~> 0.10"
 
 # JWT for API authentication
-gem "jwt", "~> 2.7"
+gem "jwt", "~> 3.2"
 
 # Pagination
 gem "kaminari"
