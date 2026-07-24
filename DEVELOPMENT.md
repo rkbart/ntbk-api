@@ -1196,6 +1196,8 @@ end
 }
 ```
 
+**Note**: `workspace_id` is included in search results for correct navigation from search results to the workspace.
+
 ### Performance
 
 - **GIN index** provides O(log n) lookup for full-text queries

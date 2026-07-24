@@ -27,6 +27,19 @@ Users can manage their profile and password from the Settings page:
 - Email/password users see "Change Password" (requires current password)
 - After setting password, OAuth users can login with either method
 
+## User Settings
+
+Users can manage their profile and password from the Settings page:
+
+- **Profile**: Update name (displayed as "Signed in as" instead of email)
+- **Password**: Change password (email/password users) or set password (OAuth users)
+- **Connected Accounts**: View linked OAuth providers
+
+### OAuth User Behavior
+- OAuth users see "Set Password" (optional, enables email/password login)
+- Email/password users see "Change Password" (requires current password)
+- After setting password, OAuth users can login with either method
+
 ## Smart Document Extraction
 
 When uploading files, the system automatically:
