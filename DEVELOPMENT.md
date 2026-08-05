@@ -264,8 +264,8 @@ bundle install
 **File**: `app/serializers/user_serializer.rb`
 ```ruby
 class UserSerializer < ActiveModel::Serializer
-  attributes :id, :email, :created_at, :updated_at
-  has_one :workspace
+  attributes :id, :email, :name, :created_at, :updated_at
+  has_many :workspaces
 
   def created_at
     object.created_at&.iso8601
@@ -336,7 +336,7 @@ UserSerializer.new(user).as_json
 
 ### Installation
 ```bash
-echo 'gem "jwt", "~> 2.7"' >> Gemfile
+echo 'gem "jwt", "~> 3.2"' >> Gemfile
 bundle install
 ```
 
@@ -747,6 +747,7 @@ ntbk-api/
 │   │       ├── documents_controller.rb
 │   │       ├── tags_controller.rb
 │   │       ├── search_controller.rb
+│   │       ├── settings_controller.rb
 │   │       └── attachments_controller.rb
 │   │   └── attachments/
 │   │       ├── download_controller.rb
@@ -755,7 +756,8 @@ ntbk-api/
 │   │       ├── base_controller.rb
 │   │       ├── embeddings_controller.rb
 │   │       ├── chat_controller.rb
-│   │       └── summaries_controller.rb
+│   │       ├── summaries_controller.rb
+│   │       └── workspace_summary_controller.rb
 │   ├── models/
 │   │   ├── user.rb
 │   │   ├── workspace.rb
@@ -764,6 +766,7 @@ ntbk-api/
 │   │   ├── tag.rb
 │   │   ├── document_tag.rb
 │   │   ├── attachment.rb
+│   │   ├── oauth_identity.rb
 │   │   ├── conversation.rb
 │   │   └── message.rb
 │   ├── serializers/
@@ -780,20 +783,30 @@ ntbk-api/
 │   │   ├── jwt_service.rb
 │   │   ├── search_service.rb
 │   │   ├── ollama_client.rb
+│   │   ├── openai_client.rb
+│   │   ├── anthropic_client.rb
+│   │   ├── llm_client_factory.rb
 │   │   ├── embedding_service.rb
 │   │   ├── summary_service.rb
-│   │   └── chat_service.rb
+│   │   ├── chat_service.rb
+│   │   ├── text_extraction_service.rb
+│   │   └── workspace_summary_service.rb
 │   └── jobs/
 │       ├── attachments/
 │       │   ├── thumbnail_generator_job.rb
-│       │   └── metadata_extractor_job.rb
+│       │   ├── metadata_extractor_job.rb
+│       │   └── text_extraction_job.rb
 │       ├── embedding_job.rb
 │       ├── summary_job.rb
 │       └── document_embedding_job.rb
+├── app/validators/
+│   └── file_upload_validator.rb
 ├── config/
 │   ├── initializers/
 │   │   ├── cors.rb
-│   │   └── devise.rb
+│   │   ├── devise.rb
+│   │   ├── ollama.rb
+│   │   └── rack_attack.rb
 │   └── routes.rb
 ├── db/
 │   └── migrate/
@@ -970,7 +983,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 # Pull required models
 ollama pull nomic-embed-text  # For embeddings (768 dimensions)
-ollama pull llama3:8b         # For chat and summaries
+ollama pull llama3.2:latest   # For chat and summaries
 
 # Add neighbor gem to Gemfile
 echo 'gem "neighbor"' >> Gemfile
@@ -989,7 +1002,7 @@ bin/rails db:migrate
 ```bash
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-OLLAMA_CHAT_MODEL=llama3:8b
+OLLAMA_CHAT_MODEL=llama3.2:latest
 OLLAMA_TIMEOUT=60
 OLLAMA_VERIFY_ON_BOOT=true
 ```
@@ -1062,9 +1075,9 @@ end
 **Embeddings**:
 - `POST /api/v1/ai/embeddings` - Generate embedding for text
 - `POST /api/v1/ai/embeddings/search` - Semantic search in workspace
-- `POST /api/v1/ai/embeddings/similar/:id` - Find similar documents
-- `POST /api/v1/ai/embeddings/generate/:id` - Generate embedding for document
-- `POST /api/v1/ai/embeddings/generate_workspace/:id` - Generate all embeddings
+- `POST /api/v1/ai/embeddings/:id/similar` - Find similar documents
+- `POST /api/v1/ai/embeddings/:id/generate` - Generate embedding for document
+- `POST /api/v1/ai/embeddings/generate_workspace` - Generate all embeddings
 
 **Chat**:
 - `GET /api/v1/ai/conversations` - List conversations
@@ -1077,7 +1090,7 @@ end
 **Summaries**:
 - `GET /api/v1/workspaces/:id/documents/:id/summary` - Get summary
 - `POST /api/v1/workspaces/:id/documents/:id/summary` - Generate summary
-- `POST /api/v1/ai/summaries/generate_workspace/:id` - Generate all summaries
+- `POST /api/v1/ai/summaries/generate_workspace` - Generate all summaries
 
 ### Background Jobs
 
@@ -1089,7 +1102,7 @@ end
 
 **Prerequisites**:
 - Ollama running locally
-- Models pulled: `nomic-embed-text`, `llama3:8b`
+- Models pulled: `nomic-embed-text`, `llama3.2:latest`
 
 **Run AI-specific tests**:
 ```bash
@@ -1225,7 +1238,7 @@ end
 - [x] Create Tag model
 - [x] Add API controllers for CRUD operations
 - [x] Implement full-text search
-- [ ] Add API versioning
+- [x] Add API versioning
 - [ ] Deploy to production
 
 ---
@@ -1287,4 +1300,3 @@ patch "settings/password", to: "settings#update_password"
 
 ## Testing
 - 131+ tests passing
-- Added settings controller tests for profile and password updates

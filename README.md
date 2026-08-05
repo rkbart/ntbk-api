@@ -27,19 +27,6 @@ Users can manage their profile and password from the Settings page:
 - Email/password users see "Change Password" (requires current password)
 - After setting password, OAuth users can login with either method
 
-## User Settings
-
-Users can manage their profile and password from the Settings page:
-
-- **Profile**: Update name (displayed as "Signed in as" instead of email)
-- **Password**: Change password (email/password users) or set password (OAuth users)
-- **Connected Accounts**: View linked OAuth providers
-
-### OAuth User Behavior
-- OAuth users see "Set Password" (optional, enables email/password login)
-- Email/password users see "Change Password" (requires current password)
-- After setting password, OAuth users can login with either method
-
 ## Smart Document Extraction
 
 When uploading files, the system automatically:
@@ -149,10 +136,6 @@ POST   /api/v1/workspaces/:id/summary  - Workspace summary
 # Database
 DATABASE_URL=postgresql://localhost:5432/ntbk_development
 
-# JWT
-JWT_SECRET_KEY=your-secret-key
-JWT_EXPIRATION_HOURS=24
-
 # Google OAuth
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_SECRET=your-client-secret
@@ -174,7 +157,7 @@ FRONTEND_URL=http://localhost:5173
 bundle exec rspec
 
 # Run specific test file
-bundle exec rspec spec/requests/api/v1/settings_spec.rb
+bundle exec rspec spec/requests/api/v1/auth_spec.rb
 ```
 
 ## License
